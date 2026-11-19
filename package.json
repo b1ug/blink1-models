@@ -1,0 +1,22 @@
+{
+  "name": "@b1ug/blink1-models",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Versioned blink(1) models and Three.js assembly",
+  "files": [
+    "models",
+    "stage.js",
+    "LICENSE",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/b1ug/blink1-models.git"
+  },
+  "exports": {
+    "./stage": "./stage.js",
+    "./models/*": "./models/*",
+    "./package.json": "./package.json"
+  }
+}
