@@ -6,6 +6,7 @@ import {createBlink1Model} from './models/mk2/light-model.js';
 const canvas = document.querySelector('#model');
 const status = document.querySelector('#status');
 const reset = document.querySelector('#reset');
+const variantButtons = [...document.querySelectorAll('[data-variant]')];
 async function start() {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
@@ -52,25 +53,34 @@ async function start() {
   const [diffuserGeometry, frameGeometry] = await Promise.all(['diffuser', 'frame'].map(part =>
     loader.loadAsync(new URL('./models/mk2/model-assets/blink1mk2_enclosure_' + part + '_v3k.stl', import.meta.url).href)
   ));
-  const model = createBlink1Model(THREE, {diffuserGeometry, frameGeometry});
-  diffuserGeometry.dispose();
-  frameGeometry.dispose();
-  model.group.rotation.set(.035, -.12, .1);
-  scene.add(model.group);
-  const bounds = new THREE.Box3().setFromObject(model.group).getBoundingSphere(new THREE.Sphere());
-  const radius = bounds.radius * 1.08;
-  orbit.target.copy(bounds.center);
-  camera.position.copy(bounds.center).add(new THREE.Vector3(-5.5, 7.5, 11));
-  orbit.update();
-  orbit.saveState();
+  let model = null, viewRadius = 1;
   function render() { renderer.render(scene, camera); }
+  function showVariant(variant) {
+    const direction = model
+      ? camera.position.clone().sub(orbit.target).normalize()
+      : new THREE.Vector3(-5.5, 7.5, 11).normalize();
+    model?.dispose();
+    model = createBlink1Model(THREE, {diffuserGeometry, frameGeometry, variant});
+    model.group.rotation.set(.035, -.12, .1);
+    scene.add(model.group);
+    const bounds = new THREE.Box3().setFromObject(model.group).getBoundingSphere(new THREE.Sphere());
+    viewRadius = bounds.radius * 1.08;
+    orbit.target.copy(bounds.center);
+    camera.position.copy(bounds.center).addScaledVector(direction, viewRadius * 5.5);
+    orbit.update();
+    orbit.saveState();
+    for (const button of variantButtons) {
+      button.setAttribute('aria-pressed', String(button.dataset.variant === variant));
+    }
+    resize();
+  }
   function resize() {
     const w = canvas.clientWidth;
     const h = canvas.clientHeight;
     if (!w || !h) return;
     renderer.setSize(w, h, false);
     const aspect = w / h;
-    const halfHeight = radius / Math.min(1, aspect);
+    const halfHeight = viewRadius / Math.min(1, aspect);
     camera.top = halfHeight;
     camera.bottom = -halfHeight;
     camera.left = -halfHeight * aspect;
@@ -102,6 +112,10 @@ async function start() {
 
   orbit.addEventListener('change', render);
   reset.addEventListener('click', () => orbit.reset());
+  for (const button of variantButtons) {
+    button.addEventListener('click', () => showVariant(button.dataset.variant));
+    button.disabled = false;
+  }
   new ResizeObserver(resize).observe(canvas);
   reset.disabled = false;
   status.hidden = true;
@@ -109,7 +123,12 @@ async function start() {
     status.hidden = false;
     status.textContent = 'Graphics paused. Reload to restore the view.';
   });
-  resize();
+  showVariant('shell');
+  window.addEventListener('pagehide', () => {
+    model?.dispose();
+    diffuserGeometry.dispose(); frameGeometry.dispose();
+    renderer.dispose();
+  }, {once: true});
 }
 start().catch(() => {
   status.hidden = false;

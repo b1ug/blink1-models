@@ -3,7 +3,8 @@
  * 101abe3599c661c4dd4d1204b4d50fb592293143. Changes: visual assembly alignment,
  * derived frame contact fitting, crease-preserving shading normals, procedural finishes, colour illustration
  * and supplemental USB geometry.
- * CAD derivatives: CC BY-SA 4.0; see model-assets/LICENSE.txt and model-assets/source.json.
+ * Enclosure CAD derivatives: CC BY-SA 4.0. PCB layout data: CC BY-SA 3.0.
+ * See the notices in model-assets/ and model-assets/source.json.
  * THREE and the raw official STL geometries are supplied by the caller.
  * The diffuser is continuous; LED 1 and LED 2 illuminate opposite PCB faces.
  * The project author's original LED table identifies blink(1) as LED 1/top
@@ -11,10 +12,19 @@
  * Colour rendering is a screen illustration, never an optical measurement.
  */
 import {fitFrameToDiffuser} from './enclosure-fit.js';
+import {createBlink1PCB} from './pcb-model.js';
 
-export function createBlink1Model(THREE, { diffuserGeometry, frameGeometry } = {}) {
+export function createBlink1Model(THREE, {
+  diffuserGeometry, frameGeometry, variant = 'shell',
+} = {}) {
+  if (!['shell', 'internals', 'assembled'].includes(variant)) {
+    throw new Error('Unknown blink(1) model variant: ' + variant);
+  }
+  const showShell = variant !== 'internals';
+  const showPCB = variant !== 'shell';
   const group = new THREE.Group();
   group.name = 'blink(1) mk2';
+  group.userData.variant = variant;
   const geometries = new Set(), materials = new Set(), textures = new Set();
   const geometry = value => { geometries.add(value); return value; };
   const material = value => { materials.add(value); return value; };
@@ -304,8 +314,12 @@ export function createBlink1Model(THREE, { diffuserGeometry, frameGeometry } = {
   const edgeSteel = material(new THREE.MeshStandardMaterial({ color: 0xc4c9cb, metalness: .9, roughness: .55 }));
   const darkPolymer = material(new THREE.MeshStandardMaterial({ color: 0x151d22, metalness: 0, roughness: .84 }));
   const contacts = material(new THREE.MeshStandardMaterial({ color: 0xbca16b, metalness: .88, roughness: .31 }));
-  add('Original frame — CAD details retained', metalUV(frame, true), graphite);
-  add('One continuous milky diffuser', shell, plastic);
+  if (showShell) {
+    add('Original frame — CAD details retained', metalUV(frame, true), graphite);
+    add('One continuous milky diffuser', shell, plastic);
+  } else {
+    geometries.add(frame); geometries.add(shell);
+  }
 
   // USB-A shell: open at the end, with genuine holes cut through its roof.
   // Values below are millimetres before normalization to the CAD assembly.
@@ -361,6 +375,14 @@ export function createBlink1Model(THREE, { diffuserGeometry, frameGeometry } = {
   for (const part of interior) part.applyMatrix4(turnInterior);
   group.userData.usbInterior = { openFace: '+y', tongueFace: '-y', contactFace: '+y', midplaneY: midY };
 
+  const pcbModel = showPCB ? createBlink1PCB(THREE, {
+    unit,
+    originX: frameBox.min.x + .65 * unit,
+    centerY: midY,
+    centerZ: (frameBox.min.z + frameBox.max.z) / 2,
+  }) : null;
+  if (pcbModel) group.add(pcbModel.group);
+
   // A physical pair above/below the PCB. Their spill can illuminate a caller's
   // desk plane, while the continuous cap stays white between softer highlights.
   // Keep a lamp's spill near its own face and the desk. A long-range,
@@ -377,6 +399,7 @@ export function createBlink1Model(THREE, { diffuserGeometry, frameGeometry } = {
     1: { axis: '+y', wordmark: hasCAD ? 'blink(1)' : null },
     2: { axis: '-y', wordmark: hasCAD ? 'ThingM' : null },
   };
+  group.userData.pcbRevision = pcbModel ? 'v2c6' : null;
   group.userData.faceMappingSource = 'Project MK2 wordmark mapping; manufacturer references supply top/bottom numbering. See model-assets/source.json.';
   group.userData.bodySize = { x: shellSize.x, y: shellSize.y, z: shellSize.z };
   group.userData.upAxis = 'y';
@@ -396,6 +419,7 @@ export function createBlink1Model(THREE, { diffuserGeometry, frameGeometry } = {
     // color space once. Do not average the sources or clip their HDR sum.
     lightField.uniforms.nb1SourceOne.value.set(active && first ? first : '#000000');
     lightField.uniforms.nb1SourceTwo.value.set(active && second ? second : '#000000');
+    pcbModel?.setColors(first, second, active);
     for (const [light, color] of [[upperLight, first], [lowerLight, second]]) {
       const power = active && color ? Math.max(...rgb(color)) / 255 : 0;
       light.color.set(color || '#ffffff'); light.intensity = power * .48;
@@ -406,6 +430,7 @@ export function createBlink1Model(THREE, { diffuserGeometry, frameGeometry } = {
     if (disposed) return;
     disposed = true;
     group.removeFromParent();
+    pcbModel?.dispose();
     for (const value of textures) value.dispose();
     for (const value of materials) value.dispose();
     for (const value of geometries) value.dispose();

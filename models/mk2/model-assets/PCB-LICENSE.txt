@@ -1,0 +1,11 @@
+blink(1) mk2 v2c6 PCB layout data
+
+Derived from hardware/schematic/blink1mk2_v2c6.brd in the official
+todbot/blink1 repository. Copyright (c) ThingM, 2012-2018.
+
+The upstream repository README declares CC BY-SA 3.0 for blink(1).
+This PCB layout data and its geometry derivatives are provided under the
+Creative Commons Attribution-ShareAlike 3.0 Unported license.
+
+License text: https://creativecommons.org/licenses/by-sa/3.0/
+Source: https://github.com/todbot/blink1/blob/main/hardware/schematic/blink1mk2_v2c6.brd

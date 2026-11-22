@@ -17,6 +17,8 @@ canvas:focus-visible { outline-offset: -3px; }
 #status { position: absolute; left: .75rem; bottom: .75rem; max-width: calc(100% - 1.5rem); padding: .4rem .65rem; margin: 0; background: #101419; border-radius: .3rem; }
 footer { margin-top: .75rem; }
 footer p { margin: 0; color: #b5c4d3; font-size: .9rem; }
+.model-modes { display: flex; gap: .5rem; margin-top: .75rem; }
+.model-modes button[aria-pressed="true"] { border-color: #9bdaff; background: #243442; }
 button { background: #1c252e; border: 1px solid #53677a; color: #edf2f7; border-radius: .35rem; padding: .35rem .8rem; }
 button:disabled, fieldset:disabled { opacity: .55; }
 button {cursor:pointer;font:inherit}
