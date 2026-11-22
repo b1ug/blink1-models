@@ -3,12 +3,12 @@
   "repository": "https://github.com/todbot/blink1",
   "commit": "101abe3599c661c4dd4d1204b4d50fb592293143",
   "checked_on": "2026-11-14",
-  "copyright": "ThingM, 2012\u20132020",
+  "copyright": "ThingM, 2012–2020",
   "license": "CC-BY-SA-4.0",
   "license_file": "LICENSE.txt",
   "license_url": "https://github.com/todbot/blink1/blob/101abe3599c661c4dd4d1204b4d50fb592293143/LICENSE.txt",
   "license_note": "The exact LICENSE.txt at this commit states CC BY-SA 4.0; README.md still says 3.0. Preserve this discrepancy rather than silently substituting one. blink(1) is a ThingM trademark.",
-  "modifications": "Original STL and LICENSE bytes are unchanged. The derived render frame has a seating fit, exterior material clearance and local USB-corner subdivision.",
+  "modifications": "Original enclosure STL and its LICENSE bytes are unchanged. The display assembly retains the fitted frame and USB reconstruction, and adds a visual PCB from the official MK2 v2c6 EAGLE layout. The model API exposes shell, PCB-only and assembled variants; the catalog UI is unchanged. Board thickness and package heights are visual estimates.",
   "assets": [
     {
       "file": "blink1mk2_enclosure_diffuser_v3k.stl",
@@ -97,6 +97,23 @@
       "sha256": "e0a5f70deb9c79bb8533122057d00f6fb20b2c050ee63123e3e6538da329ceea",
       "bytes": 351,
       "license": "CC-BY-SA-4.0"
+    },
+    {
+      "file": "pcb-layout.json",
+      "source_path": "hardware/schematic/blink1mk2_v2c6.brd",
+      "source_url": "https://github.com/todbot/blink1/blob/main/hardware/schematic/blink1mk2_v2c6.brd",
+      "source_sha256": "ac1bb0b855c3fadc6dc1998027c6a6b309c51f6942e8b180210d8b45fc0bd6b0",
+      "license": "CC-BY-SA-3.0",
+      "format": "derived EAGLE placement, outline and silkscreen data",
+      "geometry_units": "mm, as recorded by EAGLE",
+      "modifications": "Converted to the local Y-up Three.js assembly. PCB thickness, component housings and materials are visual approximations."
+    },
+    {
+      "file": "PCB-LICENSE.txt",
+      "source_path": "README.md license declaration in todbot/blink1",
+      "source_url": "https://github.com/todbot/blink1/blob/main/README.md",
+      "license": "CC-BY-SA-3.0",
+      "note": "Separate from the v3k enclosure LICENSE.txt, which states CC BY-SA 4.0."
     }
   ],
   "alignment": {
@@ -284,5 +301,36 @@
     "cause": "Coincident side planes plus metal depth bias; front roundover projected at stale pre-fit Z, exposing hidden metal triangle edges.",
     "correction": "Physical side clearance, no metal depth bias, local shared-edge subdivision and final-Z front-surface seating."
   },
-  "public_metadata_note": "Published metadata retains manufacturer URLs, CAD attribution, model changes and LED mapping. Private project-note excerpts, local source paths, device identifiers and receipt paths are omitted; original handoff is retained privately."
+  "public_metadata_note": "Published metadata retains manufacturer URLs, CAD attribution, model changes and LED mapping. Private project-note excerpts, local source paths, device identifiers and receipt paths are omitted; original handoff is retained privately.",
+  "pcb_layout": {
+    "revision": "v2c6",
+    "source_path": "hardware/schematic/blink1mk2_v2c6.brd",
+    "source_url": "https://github.com/todbot/blink1/blob/main/hardware/schematic/blink1mk2_v2c6.brd",
+    "source_sha256": "ac1bb0b855c3fadc6dc1998027c6a6b309c51f6942e8b180210d8b45fc0bd6b0",
+    "checked_on": "2026-11-22",
+    "license": "CC-BY-SA-3.0",
+    "license_file": "PCB-LICENSE.txt",
+    "derived_asset": "pcb-layout.json",
+    "dimensions_mm": {
+      "x": 12.573,
+      "y": 13.716
+    },
+    "component_placement": "Source EAGLE coordinates retained for the USB connector, controller, passives, testpoint, programming holes and both LEDs.",
+    "leds": {
+      "L1": "top side / +Y / blink(1)",
+      "L2": "bottom side / -Y / ThingM"
+    },
+    "visual_approximations": [
+      "0.8 mm board thickness",
+      "component body heights",
+      "solder and component surface finishes"
+    ],
+    "revision_note": "The user-provided v2c3 PDF is an earlier schematic. v2c5/v2c6 board files use WS2812B LED packages; the v2c6 board in the main hardware/schematic directory is the model reference. The separate dev/v2d layout is not used.",
+    "appearance_reference": "User-supplied low-resolution photos show the white PCB, USB-A shell, central QFN and components on both faces. They guide appearance only; EAGLE data supplies board coordinates and dimensions."
+  },
+  "visual_variants": {
+    "shell": "Existing enclosure and supplemental USB connector, without a populated PCB.",
+    "internals": "PCB, its two opposed LED packages and the supplemental USB connector, without enclosure geometry.",
+    "assembled": "The existing enclosure, PCB, LED packages and USB connector together."
+  }
 }

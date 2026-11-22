@@ -1,0 +1,368 @@
+{
+  "schema": "blink1-pcb-layout/v1",
+  "model": "mk2",
+  "revision": "v2c6",
+  "units": "mm",
+  "source": {
+    "repository": "https://github.com/todbot/blink1",
+    "path": "hardware/schematic/blink1mk2_v2c6.brd",
+    "url": "https://github.com/todbot/blink1/blob/main/hardware/schematic/blink1mk2_v2c6.brd",
+    "sha256": "ac1bb0b855c3fadc6dc1998027c6a6b309c51f6942e8b180210d8b45fc0bd6b0",
+    "checked_on": "2026-11-22",
+    "license": "CC-BY-SA-3.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/3.0/"
+  },
+  "coordinate_system": {
+    "origin": "EAGLE board coordinates",
+    "x": "USB connector end toward the LED end",
+    "y": "across the PCB width",
+    "center_y": 7.62,
+    "top_face": "L1 and the blink(1) wordmark",
+    "bottom_face": "L2 and the ThingM wordmark"
+  },
+  "bounds": {
+    "min": [
+      1.143,
+      0.762
+    ],
+    "max": [
+      13.716,
+      14.478
+    ],
+    "size": [
+      12.573,
+      13.716
+    ]
+  },
+  "outline": [
+    {
+      "op": "move",
+      "to": [
+        1.143,
+        2.032
+      ]
+    },
+    {
+      "op": "line",
+      "to": [
+        3.81,
+        2.032
+      ]
+    },
+    {
+      "op": "line",
+      "to": [
+        4.318,
+        0.762
+      ]
+    },
+    {
+      "op": "line",
+      "to": [
+        12.7,
+        0.762
+      ]
+    },
+    {
+      "op": "arc",
+      "center": [
+        12.7,
+        1.778
+      ],
+      "radius": 1.016,
+      "start": -90,
+      "end": 0
+    },
+    {
+      "op": "line",
+      "to": [
+        13.716,
+        13.462
+      ]
+    },
+    {
+      "op": "arc",
+      "center": [
+        12.7,
+        13.462
+      ],
+      "radius": 1.016,
+      "start": 0,
+      "end": 90
+    },
+    {
+      "op": "line",
+      "to": [
+        4.318,
+        14.478
+      ]
+    },
+    {
+      "op": "line",
+      "to": [
+        3.81,
+        13.208
+      ]
+    },
+    {
+      "op": "line",
+      "to": [
+        1.143,
+        13.208
+      ]
+    },
+    {
+      "op": "close"
+    }
+  ],
+  "holes": [
+    {
+      "source": "X1 shell anchor",
+      "x": 2.532,
+      "y": 5.37,
+      "drill": 1.1
+    },
+    {
+      "source": "X1 shell anchor",
+      "x": 2.532,
+      "y": 9.87,
+      "drill": 1.1
+    },
+    {
+      "source": "JP3 programming pad 1",
+      "x": 7.874,
+      "y": 1.778,
+      "drill": 0.8
+    },
+    {
+      "source": "JP3 programming pad 2",
+      "x": 9.374,
+      "y": 1.778,
+      "drill": 0.8
+    },
+    {
+      "source": "JP3 programming pad 3",
+      "x": 10.874,
+      "y": 1.778,
+      "drill": 0.8
+    }
+  ],
+  "components": [
+    {
+      "ref": "X1",
+      "value": "MOLEX-48037-1000",
+      "package": "MOLEX-48037-1000",
+      "kind": "usb",
+      "side": "top",
+      "x": 2.532,
+      "y": 7.62,
+      "rotation": 0,
+      "mounting_pads": {
+        "side": "bottom",
+        "size": [
+          2.54,
+          1.524
+        ],
+        "offsets": [
+          [
+            0,
+            4.85
+          ],
+          [
+            0,
+            -4.85
+          ]
+        ]
+      }
+    },
+    {
+      "ref": "U1",
+      "value": "PIC16F1455ML",
+      "package": "QFN16_4X4",
+      "kind": "microcontroller",
+      "side": "bottom",
+      "x": 5.334,
+      "y": 7.62,
+      "rotation": 0,
+      "body": [
+        4,
+        0.85,
+        4
+      ]
+    },
+    {
+      "ref": "C1",
+      "value": "100nF",
+      "package": "C0603",
+      "kind": "capacitor",
+      "side": "bottom",
+      "x": 11.176,
+      "y": 12.446,
+      "rotation": 90,
+      "body": [
+        1.6,
+        0.8,
+        0.8
+      ]
+    },
+    {
+      "ref": "R7",
+      "value": "10k",
+      "package": "R0603",
+      "kind": "resistor",
+      "side": "bottom",
+      "x": 6.604,
+      "y": 11.684,
+      "rotation": 180,
+      "body": [
+        1.6,
+        0.8,
+        0.8
+      ]
+    },
+    {
+      "ref": "C2",
+      "value": "10uF",
+      "package": "C0603",
+      "kind": "capacitor",
+      "side": "bottom",
+      "x": 9.144,
+      "y": 12.446,
+      "rotation": 90,
+      "body": [
+        1.6,
+        0.8,
+        0.8
+      ]
+    },
+    {
+      "ref": "C3",
+      "value": "100nF",
+      "package": "C0603",
+      "kind": "capacitor",
+      "side": "bottom",
+      "x": 5.334,
+      "y": 2.794,
+      "rotation": 270,
+      "body": [
+        1.6,
+        0.8,
+        0.8
+      ]
+    },
+    {
+      "ref": "P1",
+      "value": "TPTP11SQ",
+      "package": "TP11SQ",
+      "kind": "testpad",
+      "side": "top",
+      "x": 5.588,
+      "y": 13.462,
+      "rotation": 0
+    },
+    {
+      "ref": "L1",
+      "value": "WS2812B",
+      "package": "WS2812B",
+      "kind": "rgb-led",
+      "side": "top",
+      "x": 10.414,
+      "y": 7.62,
+      "rotation": 270,
+      "body": [
+        5,
+        1.6,
+        5
+      ]
+    },
+    {
+      "ref": "L2",
+      "value": "WS2812B",
+      "package": "WS2812B",
+      "kind": "rgb-led",
+      "side": "bottom",
+      "x": 10.414,
+      "y": 7.62,
+      "rotation": 90,
+      "body": [
+        5,
+        1.6,
+        5
+      ]
+    },
+    {
+      "ref": "JP3",
+      "value": "M03MM",
+      "package": "1X03-1.5MM",
+      "kind": "programming-pads",
+      "side": "top",
+      "x": 7.874,
+      "y": 1.778,
+      "rotation": 0,
+      "pitch": 1.5,
+      "count": 3
+    }
+  ],
+  "silkscreen": [
+    {
+      "side": "top",
+      "text": "blink1.thingm.com",
+      "x": 6.9596,
+      "y": 3.5661,
+      "size": 0.6096,
+      "rotation": 90
+    },
+    {
+      "side": "top",
+      "text": "blink(1)",
+      "x": 7.366,
+      "y": 11.176,
+      "size": 0.889,
+      "rotation": 0
+    },
+    {
+      "side": "top",
+      "text": "DAT",
+      "x": 8.128,
+      "y": 3.048,
+      "size": 0.508,
+      "rotation": 90
+    },
+    {
+      "side": "top",
+      "text": "U5V",
+      "x": 9.652,
+      "y": 3.048,
+      "size": 0.508,
+      "rotation": 90
+    },
+    {
+      "side": "top",
+      "text": "GND",
+      "x": 11.176,
+      "y": 3.048,
+      "size": 0.508,
+      "rotation": 90
+    },
+    {
+      "side": "top",
+      "text": "LEDstrip",
+      "x": 12.7,
+      "y": 1.016,
+      "size": 0.508,
+      "rotation": 90
+    },
+    {
+      "side": "bottom",
+      "text": "blink1mk2_v2c6",
+      "x": 1.397,
+      "y": 3.683,
+      "size": 0.6096,
+      "rotation": 90
+    }
+  ],
+  "visual_approximations": {
+    "board_thickness": 0.8,
+    "note": "PCB thickness and component heights are visual estimates. EAGLE board coordinates and footprints are retained; verify the populated assembly against the user's physical reference images."
+  }
+}

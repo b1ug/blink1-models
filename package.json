@@ -1,9 +1,9 @@
 {
   "name": "@b1ug/blink1-models",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
-  "description": "Versioned blink(1) models and Three.js assembly",
+  "description": "Versioned blink(1) models and Three.js assembly variants",
   "files": [
     "models",
     "stage.js",

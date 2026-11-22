@@ -1,7 +1,7 @@
 {
   "schema": "blink1-model/v1",
   "model": "mk2",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "enclosure_source": {
     "repository": "https://github.com/todbot/blink1",
     "commit": "101abe3599c661c4dd4d1204b4d50fb592293143",
@@ -13,12 +13,16 @@
       "sha256": "33a8c0fba98e078b9497da20289508ff5da08a4cfccc8abafbeec36a336ece99"
     },
     "light-model.js": {
-      "bytes": 23440,
-      "sha256": "764a0e92f26f6a6f32d00883c780965a852d335b951d9f27e2c1a316fae946e7"
+      "bytes": 24265,
+      "sha256": "c24895a6995bdb256c10de005d1a04e686d8313b78319387bfa5b62b7415d48b"
     },
     "model-assets/LICENSE.txt": {
       "bytes": 351,
       "sha256": "e0a5f70deb9c79bb8533122057d00f6fb20b2c050ee63123e3e6538da329ceea"
+    },
+    "model-assets/PCB-LICENSE.txt": {
+      "bytes": 516,
+      "sha256": "04c5fcb3e97b1ab6db914192219b9c9f8cfc4adfd0eeb47b053eab195e8b7660"
     },
     "model-assets/blink1mk2_enclosure_diffuser_v3k.stl": {
       "bytes": 3940514,
@@ -28,13 +32,21 @@
       "bytes": 1606855,
       "sha256": "ba0797af2873c0fc4c3477b87cde07ca1b9ec761eda001b21abe101ce035b465"
     },
+    "model-assets/pcb-layout.json": {
+      "bytes": 6477,
+      "sha256": "10f9c36aa2a65d3313b1783d0132351141acfe173d54687221525c16dd26a417"
+    },
     "model-assets/seating-fit.json": {
       "bytes": 3399,
       "sha256": "04516bf501b32ff8667a1738a99fad4cfde10cb5bcfc30836841115111d0c3c5"
     },
     "model-assets/source.json": {
-      "bytes": 14397,
-      "sha256": "2ad70d26bed617c673da560aada880008d388b5ca9e5520824ab6984284b211d"
+      "bytes": 17209,
+      "sha256": "94734671f05711da9239c4bcf13a9e5e499dd48fe1aea5d015278e27d1eef909"
+    },
+    "pcb-model.js": {
+      "bytes": 13700,
+      "sha256": "e70a79133d54afd95c28b3610c66bf22cc451eb21d55a16b81bbf3c4445391aa"
     }
   }
 }
