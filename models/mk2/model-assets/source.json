@@ -8,7 +8,7 @@
   "license_file": "LICENSE.txt",
   "license_url": "https://github.com/todbot/blink1/blob/101abe3599c661c4dd4d1204b4d50fb592293143/LICENSE.txt",
   "license_note": "The exact LICENSE.txt at this commit states CC BY-SA 4.0; README.md still says 3.0. Preserve this discrepancy rather than silently substituting one. blink(1) is a ThingM trademark.",
-  "modifications": "Original enclosure STL and its LICENSE bytes are unchanged. The display assembly retains the fitted frame and USB reconstruction, and adds a visual PCB from the official MK2 v2c6 EAGLE layout. The model API exposes shell, PCB-only and assembled variants; the catalog UI is unchanged. Board thickness and package heights are visual estimates.",
+  "modifications": "Original enclosure STL and its LICENSE bytes are unchanged. The display assembly retains the fitted frame and USB reconstruction, and adds a visual PCB from the official MK2 v2c6 EAGLE layout. The model API exposes shell, PCB-only and assembled variants; the preview page offers empty shell and PCB-only modes. Board thickness and package heights are visual estimates.",
   "assets": [
     {
       "file": "blink1mk2_enclosure_diffuser_v3k.stl",

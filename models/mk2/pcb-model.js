@@ -20,7 +20,7 @@ export function createBlink1PCB(THREE, {unit, originX, centerY, centerZ}) {
   const boardThickness = layout.visual_approximations.board_thickness;
   const boardBottom = centerY - boardThickness * unit / 2;
   const mmX = value => (value - minX) * unit;
-  const mmZ = value => (value - layout.coordinate_system.center_y) * unit;
+  const mmZ = value => -(value - layout.coordinate_system.center_y) * unit;
   const point = (x, y) => ({x: originX + mmX(x), z: centerZ + mmZ(y)});
   const sideSign = side => side === 'top' ? 1 : -1;
 
@@ -234,8 +234,9 @@ export function createBlink1PCB(THREE, {unit, originX, centerY, centerZ}) {
         location.x, centerY, location.z, length, rawHeight, width, bodyMaterial);
       for (const end of [-1, 1]) {
         const offset = rotatedOffset(end * (rawLength / 2 - .11), 0, angle);
-        box(`${component.ref} metal termination`, location.x + offset.x,
-          centerY, location.z + offset.z, rotated ? rawWidth : .22,
+        const termination = point(component.x + offset.x, component.y + offset.z);
+        box(`${component.ref} metal termination`, termination.x,
+          centerY, termination.z, rotated ? rawWidth : .22,
           rawHeight * .72, rotated ? .22 : rawWidth, solder);
       }
     }

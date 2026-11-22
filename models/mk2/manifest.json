@@ -41,12 +41,12 @@
       "sha256": "04516bf501b32ff8667a1738a99fad4cfde10cb5bcfc30836841115111d0c3c5"
     },
     "model-assets/source.json": {
-      "bytes": 17209,
-      "sha256": "94734671f05711da9239c4bcf13a9e5e499dd48fe1aea5d015278e27d1eef909"
+      "bytes": 17236,
+      "sha256": "30b20c6c11d00d93a85041465edb77bbef413fb5b434376c1c2ce1945b595dbd"
     },
     "pcb-model.js": {
-      "bytes": 13700,
-      "sha256": "e70a79133d54afd95c28b3610c66bf22cc451eb21d55a16b81bbf3c4445391aa"
+      "bytes": 13768,
+      "sha256": "bdb5a04a08b29069cbf59e6039394e47a0f394aa82925e34a2a9f77c2688697f"
     }
   }
 }

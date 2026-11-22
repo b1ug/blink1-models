@@ -24,7 +24,7 @@ scene.add(model.group);
 model.setColors('#dd4444', '#4488dd', 'preview');
 ```
 
-`variant` can be `shell`, `internals`, or `assembled`; omitting it preserves the existing shell view. The `internals` variant retains the USB plug and shows the PCB without the enclosure. The catalog UI remains unchanged; consumers select the model variant through this API. Remove the group and call `model.dispose()` when finished. The first LED faces the blink(1) wordmark, the second faces ThingM. The emitted colors illustrate the requested RGB values on screen.
+`variant` can be `shell`, `internals`, or `assembled`; omitting it preserves the existing shell view. The `internals` variant retains the USB plug and shows the PCB without the enclosure. The preview page offers `Empty shell` and `PCB only`; `assembled` remains available through this API. Remove the group and call `model.dispose()` when finished. The first LED faces the blink(1) wordmark, the second faces ThingM. The emitted colors illustrate the requested RGB values on screen.
 
 A Node build can also import `stageModel` from `@b1ug/blink1-models/stage` and call `stageModel(destination, manifestSha256)`. Use a consumer-owned staging directory and the expected digest from your dependency lock. The helper verifies the manifest and all ten files before copying them.
 
