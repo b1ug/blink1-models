@@ -8,13 +8,17 @@
     "license": "CC-BY-SA-4.0"
   },
   "files": {
+    "diffuser-optics.js": {
+      "bytes": 12761,
+      "sha256": "60f13613e3fd55b6663249c184773c9494b874de21de0857b02ca405caf6c520"
+    },
     "enclosure-fit.js": {
-      "bytes": 23583,
-      "sha256": "fac86effa1a60b254c3d0023f30203095f8d3ad8be117d820c924c75e0e5384b"
+      "bytes": 23590,
+      "sha256": "dd8c4100b1ff3d1029bc21c49cad1688ca2a529662bc80d7eac0a0f02885a6fa"
     },
     "light-model.js": {
-      "bytes": 27326,
-      "sha256": "5558a0bfb8b9b698f7094e9a53bd980e22842d9e3367edf9d9ab6b66212c3dbe"
+      "bytes": 25955,
+      "sha256": "4c7099bbd8e6a43b3856faa63f62a29d2a3ef671a1ac7ed35223b0134880dd14"
     },
     "model-assets/LICENSE.txt": {
       "bytes": 351,
@@ -41,12 +45,12 @@
       "sha256": "764b507f5b94f71b2ccae88a98cbcede02e705b7b9deadddd077a6021a5aa89f"
     },
     "model-assets/source.json": {
-      "bytes": 20138,
-      "sha256": "c184ff1a5f3b1f142ea7417dd0feb01e88b0022b2971d42b89409fe1f8711740"
+      "bytes": 24422,
+      "sha256": "f65fdbbdf81f03a79672ca978f05963989fe803706c39300e8141aa933b9894f"
     },
     "pcb-model.js": {
-      "bytes": 13721,
-      "sha256": "ed3b1c05bfecd3dcc0f5655f501c72824c32337c82a10ff3f960cfdb275a5232"
+      "bytes": 18774,
+      "sha256": "30ee9b0e9ba7dc8da5fd53005104e472268899882f926c51e2b822510f012c22"
     }
   }
 }

@@ -2,9 +2,37 @@
  * PCB layout data: CC BY-SA 3.0, see model-assets/PCB-LICENSE.txt.
  * Component body heights are visual estimates, not manufacturing dimensions.
  */
+import {fullDriveIntensity} from './diffuser-optics.js';
 import layout from './model-assets/pcb-layout.json' with {type: 'json'};
 
-export function createBlink1PCB(THREE, {unit, originX, centerY, centerZ}) {
+// Distances in mm. The window radius comes from the circle in the EAGLE
+// WS2812B package. The solder standoff and resin rise are visual estimates.
+const windowRadius = 1.7204625;
+const solderStandoff = .037;
+const resinRise = .02;
+// The clear resin scatters a small assumed fraction of the outgoing light.
+// Direct emission stays concentrated at the dies below it.
+const windowRadiance = fullDriveIntensity / (Math.PI * windowRadius ** 2);
+
+export function getBlink1LEDSources(THREE, {unit, originX, centerY, centerZ}) {
+  const halfBoard = layout.visual_approximations.board_thickness / 2;
+  return layout.components.filter(part => part.kind === 'rgb-led').map(part => {
+    const sign = part.side === 'top' ? 1 : -1;
+    return {
+      ref: part.ref,
+      position: new THREE.Vector3(
+        originX + (part.x - layout.bounds.min[0]) * unit,
+        centerY + sign * (halfBoard + solderStandoff + part.body[1] + resinRise) * unit,
+        centerZ - (part.y - layout.coordinate_system.center_y) * unit,
+      ),
+      normal: new THREE.Vector3(0, sign, 0),
+      radius: windowRadius * unit,
+    };
+  });
+}
+
+export function createBlink1PCB(THREE, placement, sources = getBlink1LEDSources(THREE, placement)) {
+  const {unit, originX, centerY, centerZ} = placement;
   const group = new THREE.Group();
   group.name = 'blink(1) mk2 PCB v2c6';
   group.userData.pcbRevision = layout.revision;
@@ -87,7 +115,12 @@ export function createBlink1PCB(THREE, {unit, originX, centerY, centerZ}) {
   });
   const markMaterial = makeMaterial(THREE.MeshBasicMaterial, {color: 0xb0493d});
   const packageMaterial = makeMaterial(THREE.MeshStandardMaterial, {color: 0xf8f6ec, roughness: .48});
-  const unlitLens = 0xdddcd5;
+  const reflector = makeMaterial(THREE.MeshStandardMaterial, {
+    color: 0xe4decb, metalness: .22, roughness: .4,
+  });
+  const polarityMark = makeMaterial(THREE.MeshStandardMaterial, {
+    color: 0xe4e1d6, roughness: .52,
+  });
 
   const boardGeometry = new THREE.ExtrudeGeometry(pcbShape(), {
     depth: boardThickness * unit, bevelEnabled: false, curveSegments: 12,
@@ -165,28 +198,96 @@ export function createBlink1PCB(THREE, {unit, originX, centerY, centerZ}) {
       continue;
     }
     if (component.kind === 'rgb-led') {
-      // The two 5050 packages occupy the same XY position on opposite PCB
-      // faces. Each white package has one circular optical window.
       const [width, height, depth] = component.body;
-      const padOffsets = [[-2.45, -1.65], [2.45, -1.65], [-2.45, 1.65], [2.45, 1.65]];
+      const source = sources.find(({ref}) => ref === component.ref);
+      // EAGLE mirrors bottom-side packages about board Y after rotation.
+      const footprintOffset = (x, y) => {
+        const offset = rotatedOffset(x, y, angle);
+        return {x: sign * offset.x, y: offset.z};
+      };
+      const orient = geometry => {
+        geometry.rotateZ(THREE.MathUtils.degToRad(angle));
+        geometry.rotateX(-Math.PI / 2);
+        if (sign < 0) geometry.rotateZ(Math.PI);
+        return geometry;
+      };
+      const padOffsets = [[2.45, -1.65], [2.45, 1.65], [-2.45, 1.65], [-2.45, -1.65]];
       for (let i = 0; i < padOffsets.length; i++) {
-        const offset = rotatedOffset(...padOffsets[i], angle);
+        const offset = footprintOffset(...padOffsets[i]);
         addSmdPad(`${component.ref} LED land ${i + 1}`,
-          component.x + offset.x, component.y + offset.z, component.side, 1.5, .9, angle);
+          component.x + offset.x, component.y + offset.y, component.side, 1.5, .9, angle);
       }
-      const bodyCenter = surface + sign * (height / 2 + .025) * unit;
-      box(`${component.ref} WS2812B package`, location.x, bodyCenter, location.z,
-        width, height, depth, packageMaterial);
-      // The v2c6 WS2812B package drawing gives the window radius in mm.
-      const radius = 1.7204625 * unit;
-      const emitterMaterial = makeMaterial(THREE.MeshStandardMaterial, {
-        color: unlitLens, emissive: 0x000000, roughness: .32, metalness: 0,
-        emissiveIntensity: 0,
+      // The moulded body surrounds an open well. The shared source plane
+      // sits on the outward face of its resin fill.
+      const halfX = width * unit / 2, halfZ = depth * unit / 2;
+      const outline = new THREE.Shape();
+      outline.moveTo(-halfX, -halfZ);
+      outline.lineTo(halfX, -halfZ); outline.lineTo(halfX, halfZ);
+      outline.lineTo(-halfX, halfZ); outline.closePath();
+      const aperture = new THREE.Path();
+      aperture.absarc(0, 0, source.radius, 0, Math.PI * 2, true);
+      outline.holes.push(aperture);
+      const housing = new THREE.ExtrudeGeometry(outline, {
+        depth: height * unit, bevelEnabled: false, curveSegments: 32,
       });
-      const emitter = mesh(`${component.ref} RGB emitter`,
-        new THREE.CylinderGeometry(radius, radius, .04 * unit, 48), emitterMaterial);
-      emitter.position.set(location.x, bodyCenter + sign * height * unit / 2, location.z);
-      ledEmitters.set(component.ref, emitter.material);
+      const body = mesh(`${component.ref} WS2812B package`, orient(housing), packageMaterial);
+      body.position.copy(source.position).addScaledVector(source.normal, -(height + resinRise) * unit);
+      const corner = new THREE.Shape();
+      corner.moveTo(-halfX, halfZ); corner.lineTo(-halfX, halfZ - .9 * unit);
+      corner.lineTo(-halfX + .9 * unit, halfZ); corner.closePath();
+      const mark = mesh(`${component.ref} polarity mark`, orient(new THREE.ShapeGeometry(corner)), polarityMark);
+      mark.position.copy(source.position).addScaledVector(source.normal, -(resinRise - .002) * unit);
+
+      // Worldsemi specifies three LEDs and an integrated controller. Die
+      // locations, well depth and optical constants are illustrative.
+      const wellDepth = .49 * unit;
+      const floor = mesh(`${component.ref} well`,
+        new THREE.CircleGeometry(source.radius, 64), packageMaterial);
+      floor.rotation.x = -sign * Math.PI / 2;
+      floor.position.copy(source.position).addScaledVector(source.normal, -wellDepth);
+      // Four separated lead-frame sections are visible in the manufacturer's
+      // WS2812B pin-configuration drawing.
+      const gap = .065 * unit, plateRadius = source.radius * .94;
+      const start = Math.asin(gap / plateRadius);
+      const plate = new THREE.Shape();
+      plate.moveTo(gap, gap);
+      plate.lineTo(plateRadius * Math.cos(start), gap);
+      plate.absarc(0, 0, plateRadius, start, Math.PI / 2 - start, false);
+      plate.closePath();
+      for (let i = 0; i < 4; i++) {
+        const section = new THREE.ShapeGeometry(plate, 16);
+        section.rotateZ(i * Math.PI / 2);
+        const land = mesh(`${component.ref} internal electrode ${i + 1}`, orient(section), reflector);
+        land.position.copy(floor.position).addScaledVector(source.normal, .005 * unit);
+      }
+      const channels = [];
+      const dieY = floor.position.y + sign * .035 * unit;
+      for (const [channel, color, dx, dz] of [
+        ['R', 0xff0000, -.49, -.30],
+        ['G', 0x00ff00, .31, -.30],
+        ['B', 0x0000ff, .31, .43],
+      ]) {
+        const material = makeMaterial(THREE.MeshStandardMaterial, {
+          color: 0xafa58b, emissive: color, emissiveIntensity: 0,
+          roughness: .36, metalness: .12,
+        });
+        const offset = footprintOffset(dx, dz);
+        box(`${component.ref} ${channel} die`, location.x + offset.x * unit, dieY,
+          location.z - offset.y * unit, .34, .07, .34, material);
+        channels.push(material);
+      }
+      const driver = footprintOffset(-.67, .52);
+      box(`${component.ref} controller die`, location.x + driver.x * unit, dieY,
+        location.z - driver.y * unit, .55, .07, .49, chipBody);
+      const resin = makeMaterial(THREE.MeshPhysicalMaterial, {
+        color: 0xf8f6ef, roughness: .22, ior: 1.48, transmission: .87,
+        thickness: wellDepth, emissiveIntensity: 0,
+      });
+      const window = mesh(`${component.ref} RGB emitter`, new THREE.CircleGeometry(source.radius, 64), resin);
+      window.rotation.x = -sign * Math.PI / 2;
+      window.position.copy(source.position);
+      window.castShadow = false;
+      ledEmitters.set(component.ref, {resin, channels});
       continue;
     }
 
@@ -280,12 +381,14 @@ export function createBlink1PCB(THREE, {unit, originX, centerY, centerZ}) {
 
   function setColors(one, two, active) {
     for (const [ref, color] of [['L1', one], ['L2', two]]) {
-      const surface = ledEmitters.get(ref);
-      if (!surface) continue;
-      const lit = active && color && color !== '#000000';
-      surface.color.set(lit ? color : unlitLens);
-      surface.emissive.set(lit ? color : 0x000000);
-      surface.emissiveIntensity = lit ? 2.4 : 0;
+      const {resin, channels} = ledEmitters.get(ref);
+      resin.emissive.set(active && color ? color : 0x000000);
+      const {r, g, b} = resin.emissive;
+      for (const [index, level] of [r, g, b].entries()) {
+        channels[index].emissiveIntensity = level * windowRadiance;
+      }
+      // Some light scatters across the resin on its way out of the well.
+      resin.emissiveIntensity = r + g + b > 0 ? windowRadiance * .012 : 0;
     }
   }
   function dispose() {

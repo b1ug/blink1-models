@@ -10,7 +10,7 @@ const smooth = value => { const t = clamp(value, 0, 1); return t * t * (3 - 2 * 
 
 // Grid the projection of each triangle once. An axis-aligned intersection then
 // visits only one cell, rather than raycasting every triangle for every vertex.
-function intersectionIndex(geometry, axis, cellSize = .5) {
+export function intersectionIndex(geometry, axis, cellSize = .5) {
   const position = geometry.getAttribute('position'), index = geometry.getIndex();
   const first = (axis + 1) % 3, second = (axis + 2) % 3;
   const coordinate = (vertex, component) => position.getComponent(vertex, component);

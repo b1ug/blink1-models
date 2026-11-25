@@ -1,14 +1,14 @@
 {
-  "title": "Official blink(1) mk2 enclosure CAD reference",
+  "title": "blink(1) mk2 enclosure, PCB assembly and LED transport references",
   "repository": "https://github.com/todbot/blink1",
   "commit": "101abe3599c661c4dd4d1204b4d50fb592293143",
-  "checked_on": "2026-11-14",
+  "checked_on": "2026-11-26",
   "copyright": "ThingM, 2012–2020",
   "license": "CC-BY-SA-4.0",
   "license_file": "LICENSE.txt",
   "license_url": "https://github.com/todbot/blink1/blob/101abe3599c661c4dd4d1204b4d50fb592293143/LICENSE.txt",
   "license_note": "The exact LICENSE.txt at this commit states CC BY-SA 4.0; README.md still says 3.0. Preserve this discrepancy rather than silently substituting one. blink(1) is a ThingM trademark.",
-  "modifications": "The assembly adjusts the diffuser to the level side rails of ThingM’s v3k metal frame and fits the parts locally at their joint. It adds a visual USB connector and a PCB based on the official MK2 v2c6 EAGLE layout. The board thickness follows the nominal two-layer design stack. Package heights are visual estimates. The API exposes shell, PCB-only and assembled variants. The preview page offers empty shell and PCB-only modes. The bundled STL files retain their original bytes.",
+  "modifications": "The assembly fits the v3k diffuser to the level side rails of the metal frame and adds a visual USB connector and populated v2c6 PCB. It models both WS2812B packages and calculates how light from each window reaches the outside of the enclosure. The bundled STLs retain their original bytes.",
   "assets": [
     {
       "file": "blink1mk2_enclosure_diffuser_v3k.stl",
@@ -101,7 +101,7 @@
     {
       "file": "pcb-layout.json",
       "source_path": "hardware/schematic/blink1mk2_v2c6.brd",
-      "source_url": "https://github.com/todbot/blink1/blob/main/hardware/schematic/blink1mk2_v2c6.brd",
+      "source_url": "https://github.com/todbot/blink1/blob/101abe3599c661c4dd4d1204b4d50fb592293143/hardware/schematic/blink1mk2_v2c6.brd",
       "source_sha256": "ac1bb0b855c3fadc6dc1998027c6a6b309c51f6942e8b180210d8b45fc0bd6b0",
       "license": "CC-BY-SA-3.0",
       "format": "derived EAGLE placement, outline and silkscreen data",
@@ -217,7 +217,7 @@
     },
     {
       "url": "https://github.com/todbot/blink1/blob/101abe3599c661c4dd4d1204b4d50fb592293143/docs/imgs/blink1mk2-twocolor-long.jpg",
-      "note": "ThingM’s illuminated mk2 side photo shows straight upper and lower edges along the metal rail, a rounded tip and a diffuser that wraps around the back."
+      "note": "The illuminated mk2 shows a blue upper face, red spill below, a color transition at the rounded end of the diffuser and an opaque metal rail with straight upper and lower edges."
     },
     {
       "source": "User-supplied mk2 joint photograph",
@@ -241,7 +241,27 @@
     },
     {
       "url": "https://thingm.com/blog/2017/12/using-the-blink1-mk2-led-strip-adapter",
-      "note": "The manufacturer shows a bare mk2 PCB and its connector during adapter assembly. The v2c6 board file supplies the coordinates used here."
+      "note": "ThingM shows the bare mk2 PCB during adapter assembly and identifies LEDs 1 and 2 as top and bottom, respectively."
+    },
+    {
+      "url": "https://github.com/todbot/blink1/blob/101abe3599c661c4dd4d1204b4d50fb592293143/hardware/schematic/blink1mk2_v2c6.brd",
+      "note": "The v2c6 EAGLE board places L1 and L2 at (10.414, 7.620) mm with rotations R270 and MR90. Its WS2812B package draws a 5 mm square body, four pads and a 1.7204625 mm radius circular window on the package drawing layer."
+    },
+    {
+      "url": "https://cdn-shop.adafruit.com/datasheets/WS2812B.pdf",
+      "note": "Worldsemi’s WS2812B datasheet, hosted by Adafruit. Pages 1–2 describe an integrated RGB LED and control IC with 256 levels per primary color and illustrate a 5 × 5 mm four-pin package with a round window. The pin drawing also shows the divided electrodes inside the window."
+    },
+    {
+      "url": "https://gigazine.net/news/20140804-blink1-mk2/",
+      "note": "In this hands-on review the authors separated the supplied mk2 into its diffuser, metal frame and USB/PCB assembly and photographed it illuminated."
+    },
+    {
+      "url": "https://i.gzn.jp/img/2014/08/04/blink1-mk2/P2220583.jpg",
+      "note": "A nearly side-on view shows the two colours meeting gradually at the curved end and the metal side rail between the lit faces."
+    },
+    {
+      "url": "https://i.gzn.jp/img/2014/08/04/blink1-mk2/P2220588.jpg",
+      "note": "Disassembly exposes the outside of the removable cover and the narrow rail seats. There is no scale or section through the centre of the moulding."
     }
   ],
   "led_numbering": {
@@ -286,10 +306,9 @@
     "date": "2026-11-26",
     "source_geometry": "The assembly uses the original engraved diffuser and metal frame meshes, with the rail alignment and joint fit described in alignment. At the USB shoulders, the renderer shades the outer walls of the metal and diffuser along the v3k corner radii. The shading follows the diffuser bevel and keeps the edges of the USB opening sharp.",
     "supplemental_geometry": "The visual USB plug uses a radiused folded shield with retention holes on both broad faces, a black insulating tongue and four staggered contacts. Its 11 mm exposed length is a display estimate. The 17.5 mm lip-to-X1 distance comes from the v2c6 EAGLE package outline. Rear solder tails meet the four X1 pads.",
-    "materials": "The frame has a uniform satin metal finish. The USB plug uses its own fine directional grain. Both fixed light sources illuminate the frosted diffuser.",
+    "materials": "The frame has a uniform satin metal finish. The USB plug uses its own fine directional grain. The diffuser has a frosted surface.",
     "presentation": "The catalog uses an orthographic orbit camera, bounded zoom, broad reflection cards and directional studio lighting.",
-    "scope": "Illustration for design review; not engineering fit or optical calibration.",
-    "emission": "The diffuser light field and both spill lights are centered over the opposed v2c6 LED packages. The two sources add in linear RGB before tone mapping."
+    "scope": "Design visualization with estimated component finishes and relative optical output."
   },
   "usb_orientation": {
     "source": "User physical observation in this design session",
@@ -302,24 +321,6 @@
     "cause": "Dominant-axis UV projection switched inside a metal curve triangle, producing a tangent/anisotropy reflection discontinuity. Ray casting confirmed the bright pixels hit the opaque metal frame, not a plastic pillar.",
     "correction": "Continuous circumferential side-frame UVs; planar top/bottom UVs; per-triangle projection for other metal parts; matte finish and anisotropy disabled.",
     "geometry": "No bridge, cover strip or source CAD position change."
-  },
-  "two_face_preview": {
-    "mapping": {
-      "1": "front / blink(1) wordmark",
-      "2": "back / ThingM wordmark"
-    },
-    "display": "Independent orthographic two-face schematic during loading, missing WebGL or context loss; also directly reviewable via ?view=faces.",
-    "states": "Resolved colors, #000000 off, and an unspecified target are distinct; reads the same presentation targets as the 3D model.",
-    "scope": "Code-native schematic, not a photograph or engineering drawing; original mascot and official CAD source bytes remain unchanged.",
-    "wordmarks": "Orthographic paths extracted from the fixed official diffuser STL engraving; no invented ThingM logo. These paths are CAD derivatives under CC-BY-SA-4.0. See inline source notes in studio.js and the preserved original enclosure license."
-  },
-  "light_overlap": {
-    "date": "2026-11-15",
-    "model": "One continuous frosted diffuser, two fixed opposed light sources.",
-    "calculation": "Smooth distance attenuation in model-local position; decode canonical sRGB source colors once and add their linear radiance before tone mapping. No average over source count and no hard face/UV split.",
-    "scope": "Visual scattering parameters, not measured optics. Opaque metal, enclosure geometry, USB orientation and wordmarks are preserved.",
-    "data": "Rendered mixture does not alter source RGB, Go playback plans or diagnostic 2D swatches.",
-    "verification": "Production GLSL software checks cover additive radiance, source dominance, cross-face transmission, continuity, black clearing and pose-invariant identity; they do not certify physical optics."
   },
   "seating_fit": {
     "date": "2026-11-26",
@@ -334,9 +335,9 @@
   "pcb_layout": {
     "revision": "v2c6",
     "source_path": "hardware/schematic/blink1mk2_v2c6.brd",
-    "source_url": "https://github.com/todbot/blink1/blob/main/hardware/schematic/blink1mk2_v2c6.brd",
+    "source_url": "https://github.com/todbot/blink1/blob/101abe3599c661c4dd4d1204b4d50fb592293143/hardware/schematic/blink1mk2_v2c6.brd",
     "source_sha256": "ac1bb0b855c3fadc6dc1998027c6a6b309c51f6942e8b180210d8b45fc0bd6b0",
-    "checked_on": "2026-11-22",
+    "checked_on": "2026-11-26",
     "license": "CC-BY-SA-3.0",
     "license_file": "PCB-LICENSE.txt",
     "derived_asset": "pcb-layout.json",
@@ -359,8 +360,60 @@
     "stackup_basis": "v2c6 EAGLE layerSetup (1*16), 1.5011 mm dielectric and 0.0356 mm copper per side. The production board was not measured."
   },
   "visual_variants": {
-    "shell": "Existing enclosure and supplemental USB connector, without a populated PCB.",
-    "internals": "PCB, its two opposed LED packages and the supplemental USB connector, without enclosure geometry.",
-    "assembled": "The existing enclosure, PCB, LED packages and USB connector together."
+    "shell": "Diffuser, frame and USB plug. The catalog shows this view unlit and disables its LED controls.",
+    "internals": "PCB, both independently controlled LED packages and the USB plug.",
+    "assembled": "PCB and both LED packages fitted inside the diffuser and metal frame, with the USB plug exposed. The catalog opens in this view with both LEDs on and retains the chosen colors and power states between views. Cutaway clips the displayed enclosure lengthwise while retaining the closed assembly’s light field."
+  },
+  "optical_model": {
+    "source_placement": "Each light source shares the centre, outward normal and aperture radius of its rendered WS2812B window. L1 faces model +Y and L2 faces −Y.",
+    "package": "The exposed package shows RGB dies and a control IC in a recessed well, reflective electrodes, a clear resin window and four external contacts. Internal die positions, well depth and resin profile are illustrative.",
+    "transport": "The renderer voxelizes the fitted diffuser, metal frame and installed PCB substrate. Deterministic rays leave each finite circular window over a cosine-weighted outward hemisphere. They cross air gaps, stop at opaque cells, and deposit flux on first contact with plastic.",
+    "diffuser": "A finite-volume solver calculates steady-state diffusion and absorption inside the plastic. The boundary model permits light to escape into air and treats metal and PCB contacts as opaque. Each LED contributes a separate scalar light field, stored in a 3D texture.",
+    "color_drive": "Each 8-bit RGB input channel supplies a linear PWM fraction between zero and one. The renderer multiplies each LED’s field by its RGB drive and adds the two results before display tone mapping. Changing LED drive reuses the fields.",
+    "exposed_board": "With the enclosure removed, the RGB dies and resin show their drive state and each window casts light into its outward hemisphere.",
+    "external_spill": "For the closed assembly, outgoing brightness is integrated over the area of each diffuser face. One outward light per face then illuminates nearby scene surfaces. These lights use the solved diffuser field as input.",
+    "limitations": "The Lambertian angular distribution, scalar scattering and absorption coefficients, interface losses and display brightness are assumptions. Absolute luminous flux, the production diffuser’s optical constants and actual die positions remain unmeasured.",
+    "diffuser_parameters": {
+      "assumed_absorption_per_mm": 0.008,
+      "assumed_reduced_scattering_per_mm": 0.42,
+      "assumed_diffuse_boundary_reflectance": 0.78,
+      "target_cell_spacing_mm": 0.45,
+      "window_samples_per_led": 4096,
+      "equation_reference": "https://graphics.stanford.edu/~srm/publications/SG01-subsurf-abstract.html",
+      "note": "The diffusion equation is solved on the fitted mesh volume. Parameters describe this visualization of the milky diffuser.",
+      "assumed_refractive_index": 1.44,
+      "air_boundary_samples_per_face": 48
+    },
+    "drive_reference": "https://github.com/todbot/blink1/blob/101abe3599c661c4dd4d1204b4d50fb592293143/hardware/firmware_mk2/ws2811.h",
+    "cavity_exchange": "Plastic faces exchange light across air gaps using cosine-weighted visibility rays. Metal and PCB terminate rays. On first entry and on re-entry, unpolarized Fresnel transmission weights the light entering the receiving plastic at the incident angle. Reflected air-side rays are counted as a loss. Returned energy is apportioned from flux already leaving its sending face.",
+    "cavity_exchange_reference": "https://www.pbr-book.org/4ed/Light_Transport_I_Surface_Reflection/The_Light_Transport_Equation",
+    "validation": {
+      "comparison_commit": "7859f2f5b8f68be11d869b716025708bd5e51dde",
+      "metric": "Vertical extent on the rearmost plastic surface along the width centreline, sampled every 0.015 nominal mm. At equal normalized source drive, each LED must contribute at least 25% of the summed linear field before tone mapping.",
+      "previous_extent_mm": 4.59,
+      "with_cavity_exchange_mm": 5.61
+    }
+  },
+  "diffuser_wall_section": {
+    "source": "blink1mk2_enclosure_diffuser_v3k.stl",
+    "measurement": "Through both LED packages, 14.52 nominal mm from the diffuser’s USB end. Top and bottom thicknesses are measured parallel to the board normal at the same longitudinal station.",
+    "sections": [
+      {
+        "offset_from_width_centre_mm": 0,
+        "top_mm": 2.992,
+        "bottom_mm": 2.996
+      },
+      {
+        "offset_from_width_centre_mm": 7.25,
+        "top_mm": 1.77,
+        "bottom_mm": 1.772
+      },
+      {
+        "offset_from_width_centre_mm": 8.42,
+        "top_mm": 0.999,
+        "bottom_mm": 0.999
+      }
+    ],
+    "scope": "The board and plug provide the nominal millimetre scale for the unitless STL. The published mesh is thicker through the middle and tapers to the metal seats. These are design dimensions. The photographs establish the outer profile and assembly."
   }
 }

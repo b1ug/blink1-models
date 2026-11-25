@@ -1,7 +1,7 @@
 /* blink(1) mk2 object for the isolated local design study.
  * Derived from ThingM/todbot blink1 official enclosure CAD at fixed commit
  * 101abe3599c661c4dd4d1204b4d50fb592293143. Changes: visual assembly alignment,
- * level diffuser seats, derived frame contact fitting, crease-preserving shading normals, procedural finishes, colour illustration
+ * level diffuser seats, derived frame contact fitting, crease-preserving shading normals, procedural finishes, PCB-driven optical transport
  * and supplemental USB geometry.
  * Enclosure CAD derivatives: CC BY-SA 4.0. PCB layout data: CC BY-SA 3.0.
  * See the notices in model-assets/ and model-assets/source.json.
@@ -12,7 +12,8 @@
  * Colour rendering is a screen illustration, never an optical measurement.
  */
 import {fitFrameToDiffuser, levelEnclosureRails} from './enclosure-fit.js';
-import {createBlink1PCB} from './pcb-model.js';
+import {createBlink1PCB, getBlink1LEDSources} from './pcb-model.js';
+import {createDiffuserTransfer, diffuserIOR, fullDriveIntensity} from './diffuser-optics.js';
 import pcbLayout from './model-assets/pcb-layout.json' with {type: 'json'};
 
 export function createBlink1Model(THREE, {
@@ -205,9 +206,9 @@ export function createBlink1Model(THREE, {
   const plugLength = 17.5 * unit, plugRoot = plugEnd + plugLength;
   const x1 = pcbLayout.components.find(component => component.ref === 'X1');
   const boardFront = plugRoot + (pcbLayout.bounds.min[0] - x1.x) * unit;
-  const led = pcbLayout.components.find(component => component.ref === 'L1');
-  const emitterXZ = new THREE.Vector2(plugRoot + (led.x - x1.x) * unit,
-    midZ - (led.y - pcbLayout.coordinate_system.center_y) * unit);
+  const placement = {unit, originX: boardFront, centerY: midY, centerZ: midZ};
+  const sources = getBlink1LEDSources(THREE, placement);
+  const pcbModel = showPCB ? createBlink1PCB(THREE, placement, sources) : null;
   function finishTexture(kind) {
     const size = 256, data = new Uint8Array(size * size * 4);
     const hash = n => { let v = Math.imul(n ^ 0x9e3779b9, 0x85ebca6b); v ^= v >>> 13; return (v >>> 0) / 4294967295; };
@@ -287,65 +288,43 @@ export function createBlink1Model(THREE, {
     color: 0xf8faf7,
     metalness: 0, roughness: .47, roughnessMap: frostRoughness, envMapIntensity: .32,
     normalMap: frostNormal, normalScale: new THREE.Vector2(.11, .11),
-    transmission: .12, thickness: .13, ior: 1.44,
+    transmission: .12, thickness: .13, ior: diffuserIOR,
     attenuationColor: new THREE.Color(0xf5faf7), attenuationDistance: 1.6,
     clearcoat: .035, clearcoatRoughness: .42, specularIntensity: .75,
-    emissive: new THREE.Color(0xffffff), emissiveIntensity: 2.15,
+    emissive: new THREE.Color(0xffffff),
   }));
-  // Both LEDs illuminate the same continuous volume. Work in linear light:
-  // contributions add before tone mapping, while distance gives each main
-  // face its own dominant source and allows a soft overlap around the rim.
-  // These widths are visual scattering parameters, not measured optics.
-  const lightField = {
-    uniforms: {
-      nb1SourceOne: {value: new THREE.Color(0, 0, 0)},
-      nb1SourceTwo: {value: new THREE.Color(0, 0, 0)},
-      nb1ShellMin: {value: shellBox.min.clone()},
-      nb1ShellSize: {value: shellSize.clone()},
-      nb1EmitterXZ: {value: emitterXZ},
-    },
-    fragment: `
-      uniform vec3 nb1SourceOne;
-      uniform vec3 nb1SourceTwo;
-      uniform vec3 nb1ShellMin;
-      uniform vec3 nb1ShellSize;
-      uniform vec2 nb1EmitterXZ;
-      vec3 nb1LightField(vec3 localPosition) {
-        vec3 p = (localPosition - nb1ShellMin) / nb1ShellSize;
-        vec2 plane = 2.0 * (localPosition.xz - nb1EmitterXZ) / nb1ShellSize.xz;
-        float radius = dot(plane * plane, vec2(1.8, 2.2));
-        float radial = 0.72 * exp(-0.55 * radius) + 0.28 * exp(-3.2 * radius);
-        float upper = exp(-8.0 * (p.y - 0.8) * (p.y - 0.8));
-        float lower = exp(-8.0 * (p.y - 0.2) * (p.y - 0.2));
-        return 1.38 * radial * (nb1SourceOne * upper + nb1SourceTwo * lower);
-      }
-    `,
-  };
-  plastic.userData.lightField = lightField;
-  plastic.onBeforeCompile = shader => {
-    Object.assign(shader.uniforms, lightField.uniforms);
-    shader.vertexShader = shader.vertexShader
-      .replace('#include <common>', '#include <common>\nvarying vec3 nb1LocalPosition;')
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\nnb1LocalPosition = position;');
-    shader.fragmentShader = shader.fragmentShader
-      .replace('#include <common>', `#include <common>\nvarying vec3 nb1LocalPosition;\n${lightField.fragment}`)
-      .replace('#include <color_fragment>', `#include <color_fragment>
-        vec3 nb1Radiance = nb1LightField(nb1LocalPosition);
-        float nb1Strength = max(nb1Radiance.r, max(nb1Radiance.g, nb1Radiance.b));
-        vec3 nb1Hue = nb1Strength > 0.0 ? nb1Radiance / nb1Strength : vec3(1.0);
-        float nb1PeakOne = max(nb1SourceOne.r, max(nb1SourceOne.g, nb1SourceOne.b));
-        float nb1PeakTwo = max(nb1SourceTwo.r, max(nb1SourceTwo.g, nb1SourceTwo.b));
-        float nb1Peak = max(nb1PeakOne, nb1PeakTwo);
-        float nb1Coverage = clamp(nb1Strength / max(nb1Peak, 0.000001), 0.0, 1.0);
-        float nb1Tint = 0.94 * pow(clamp(nb1Peak, 0.0, 1.0), 0.15) * nb1Coverage;
-        // Keep the lit core from being washed out by the milky reflection.
-        // This surface tint is separate from the additive linear emission.
-        vec3 nb1SurfaceTint = mix(vec3(1.0), pow(nb1Hue, vec3(1.0 / 2.2)), nb1Tint);
-        diffuseColor.rgb *= pow(nb1SurfaceTint, vec3(2.2));
-      `)
-      .replace('#include <emissivemap_fragment>', 'totalEmissiveRadiance *= nb1Radiance;');
-  };
-  plastic.customProgramCacheKey = () => 'nb1-continuous-scattering-v2';
+  const lightField = {uniforms: {
+    nb1SourceOne: {value: new THREE.Color(0, 0, 0)},
+    nb1SourceTwo: {value: new THREE.Color(0, 0, 0)},
+  }};
+  let exits = [];
+  if (showShell) {
+    const substrate = pcbModel?.group.getObjectByName('White solder-mask PCB');
+    const transfer = createDiffuserTransfer(THREE, shell, frame, substrate, sources, unit);
+    exits = transfer.lobes;
+    plastic.emissiveIntensity = transfer.surfaceGain;
+    Object.assign(lightField.uniforms, {
+      nb1Transfer: {value: texture(transfer.texture)},
+      nb1GridMin: {value: transfer.origin},
+      nb1GridSize: {value: transfer.extent},
+    });
+    plastic.userData.lightField = lightField;
+    plastic.onBeforeCompile = shader => {
+      Object.assign(shader.uniforms, lightField.uniforms);
+      shader.vertexShader = shader.vertexShader
+        .replace('#include <common>', '#include <common>\nvarying vec3 nb1Position;')
+        .replace('#include <begin_vertex>', '#include <begin_vertex>\nnb1Position = position;');
+      shader.fragmentShader = shader.fragmentShader
+        .replace('#include <common>', `#include <common>
+          varying vec3 nb1Position;
+          uniform vec3 nb1SourceOne, nb1SourceTwo, nb1GridMin, nb1GridSize;
+          uniform highp sampler3D nb1Transfer;`)
+        .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+          vec2 response = texture(nb1Transfer, (nb1Position - nb1GridMin) / nb1GridSize).rg;
+          totalEmissiveRadiance *= response.r * nb1SourceOne + response.g * nb1SourceTwo;`);
+    };
+    plastic.customProgramCacheKey = () => 'blink1-volume-diffusion-v1';
+  }
   const graphite = material(new THREE.MeshPhysicalMaterial({
     color: 0x91999f, metalness: .94, roughness: .62,
   }));
@@ -431,26 +410,21 @@ export function createBlink1Model(THREE, {
   }
   group.userData.usbInterior = { openFace: '+y', tongueFace: '-y', contactFace: '+y', midplaneY: midY };
 
-  const pcbModel = showPCB ? createBlink1PCB(THREE, {
-    unit,
-    originX: boardFront,
-    centerY: midY,
-    centerZ: midZ,
-  }) : null;
   if (pcbModel) group.add(pcbModel.group);
-
-  // A physical pair above/below the PCB. Their spill can illuminate a caller's
-  // desk plane, while the continuous cap stays white between softer highlights.
-  // Keep a lamp's spill near its own face and the desk. A long-range,
-  // unshadowed point light would shine through the PCB into the opposite cap.
-  const spillDistance = Math.max(.75, shellSize.y * .6);
-  const upperLight = new THREE.PointLight(0xffffff, 0, spillDistance, 2);
-  const lowerLight = new THREE.PointLight(0xffffff, 0, spillDistance, 2);
-  upperLight.name = 'LED 1 — top'; lowerLight.name = 'LED 2 — bottom';
-  upperLight.position.set(emitterXZ.x, frameBox.max.y + .18 * unit, emitterXZ.y);
-  lowerLight.position.set(emitterXZ.x, frameBox.min.y - .18 * unit, emitterXZ.y);
-  group.add(upperLight, lowerLight);
-  group.userData.ledPlacement = 'independent top/bottom PCB faces; not side-by-side bulbs';
+  // With the cover removed the windows illuminate nearby scene objects. In
+  // the closed assembly the computed volume field accounts for that flux.
+  const lobes = showShell ? exits : sources.map((source, i) => ({
+    ...source, response: i === 0 ? [1, 0] : [0, 1],
+  }));
+  const lights = lobes.map(({position, normal}, i) => {
+    const light = new THREE.SpotLight(0xffffff, 0, 60 * unit, Math.PI / 2, 1, 2);
+    light.name = showShell ? 'Diffuser spill ' + (i + 1) : sources[i].ref + ' — optical window';
+    light.position.copy(position);
+    light.target.position.copy(position).addScaledVector(normal, unit);
+    group.add(light, light.target);
+    return light;
+  });
+  group.userData.ledPlacement = 'opposed WS2812B resin windows, registered to the PCB';
   group.userData.ledFaces = {
     1: { axis: '+y', wordmark: hasCAD ? 'blink(1)' : null },
     2: { axis: '-y', wordmark: hasCAD ? 'ThingM' : null },
@@ -458,12 +432,16 @@ export function createBlink1Model(THREE, {
   group.userData.pcbRevision = pcbModel ? 'v2c6' : null;
   group.userData.faceMappingSource = 'Project MK2 wordmark mapping; manufacturer references supply top/bottom numbering. See model-assets/source.json.';
   group.userData.bodySize = { x: shellSize.x, y: shellSize.y, z: shellSize.z };
+  group.userData.unitsPerMillimetre = unit;
   group.userData.upAxis = 'y';
 
   function canonical(value) {
     return typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value) ? value.toLowerCase() : null;
   }
-  function rgb(value) { return value ? [1, 3, 5].map(start => parseInt(value.slice(start, start + 2), 16)) : [0, 0, 0]; }
+  function setPWM(target, value) {
+    const rgb = value ? parseInt(value.slice(1), 16) : 0;
+    target.setRGB((rgb >> 16) / 255, ((rgb >> 8) & 255) / 255, (rgb & 255) / 255);
+  }
   function setColors(one, two, source = 'none') {
     if (disposed) return;
     const first = canonical(one), second = canonical(two);
@@ -471,14 +449,16 @@ export function createBlink1Model(THREE, {
     const key = `${active}:${source}:${first}:${second}`;
     if (key === lastColors) return;
     lastColors = key;
-    // THREE.Color decodes the canonical sRGB strings to the working linear
-    // color space once. Do not average the sources or clip their HDR sum.
-    lightField.uniforms.nb1SourceOne.value.set(active && first ? first : '#000000');
-    lightField.uniforms.nb1SourceTwo.value.set(active && second ? second : '#000000');
-    pcbModel?.setColors(first, second, active);
-    for (const [light, color] of [[upperLight, first], [lowerLight, second]]) {
-      const power = active && color ? Math.max(...rgb(color)) / 255 : 0;
-      light.color.set(color || '#ffffff'); light.intensity = power * .48;
+    const upper = lightField.uniforms.nb1SourceOne.value, lower = lightField.uniforms.nb1SourceTwo.value;
+    setPWM(upper, active && first);
+    setPWM(lower, active && second);
+    pcbModel?.setColors(upper, lower, active);
+    for (const [i, light] of lights.entries()) {
+      const [primary, secondary] = lobes[i].response;
+      light.color.setRGB(upper.r * primary + lower.r * secondary,
+        upper.g * primary + lower.g * secondary, upper.b * primary + lower.b * secondary);
+      const gain = showShell ? plastic.emissiveIntensity : fullDriveIntensity * unit ** 2;
+      light.intensity = light.color.r + light.color.g + light.color.b > 0 ? gain : 0;
     }
     group.userData.colorSource = active ? source : 'none';
   }
@@ -490,7 +470,7 @@ export function createBlink1Model(THREE, {
     for (const value of textures) value.dispose();
     for (const value of materials) value.dispose();
     for (const value of geometries) value.dispose();
-    upperLight.dispose(); lowerLight.dispose();
+    for (const light of lights) light.dispose();
     group.clear();
     textures.clear(); materials.clear(); geometries.clear();
   }

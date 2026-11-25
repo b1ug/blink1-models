@@ -49,7 +49,7 @@ def website(names):
     three = site / "node_modules/three"
     vendor = target / "vendor"
     vendor.mkdir(parents=True, exist_ok=True)
-    for name in ("index.html", "viewer.js", "viewer.css"):
+    for name in ("index.html", "viewer.js", "viewer.css", "cutaway.js"):
         shutil.copyfile(site / name, target / name)
     for name in ("build/three.module.js", "build/three.core.js", "examples/jsm/controls/OrbitControls.js",
                  "examples/jsm/loaders/STLLoader.js", "LICENSE"):
