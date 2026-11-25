@@ -1,7 +1,7 @@
 /* blink(1) mk2 object for the isolated local design study.
  * Derived from ThingM/todbot blink1 official enclosure CAD at fixed commit
  * 101abe3599c661c4dd4d1204b4d50fb592293143. Changes: visual assembly alignment,
- * derived frame contact fitting, crease-preserving shading normals, procedural finishes, colour illustration
+ * level diffuser seats, derived frame contact fitting, crease-preserving shading normals, procedural finishes, colour illustration
  * and supplemental USB geometry.
  * Enclosure CAD derivatives: CC BY-SA 4.0. PCB layout data: CC BY-SA 3.0.
  * See the notices in model-assets/ and model-assets/source.json.
@@ -11,8 +11,9 @@
  * and ThingM as LED 2/bottom; that identity is fixed in object coordinates.
  * Colour rendering is a screen illustration, never an optical measurement.
  */
-import {fitFrameToDiffuser} from './enclosure-fit.js';
+import {fitFrameToDiffuser, levelEnclosureRails} from './enclosure-fit.js';
 import {createBlink1PCB} from './pcb-model.js';
+import pcbLayout from './model-assets/pcb-layout.json' with {type: 'json'};
 
 export function createBlink1Model(THREE, {
   diffuserGeometry, frameGeometry, variant = 'shell',
@@ -106,6 +107,34 @@ export function createBlink1Model(THREE, {
     return result;
   }
 
+  function enclosureNormals(input, frameCAD, tangentOffset) {
+    const shape = creasedNormals(input);
+    // Both v3k USB shoulders have a 2.75-unit plan radius. Subdivision for
+    // the joint puts many coplanar triangles inside each original STL chord.
+    // Give the exposed wall a radial normal at every one of those vertices.
+    const radius = 2.75, tangentY = frameCAD.min.y + tangentOffset;
+    const position = shape.getAttribute('position'), normal = shape.getAttribute('normal');
+    const left = frameCAD.min.x + radius, right = frameCAD.max.x - radius;
+    for (let i = 0; i < position.count; i++) {
+      const x = position.getX(i), y = position.getY(i);
+      if (y > tangentY + .2 || (x > left + .2 && x < right - .2)) continue;
+      const dx = x - THREE.MathUtils.clamp(x, left, right), dy = Math.min(0, y - tangentY);
+      const distance = Math.hypot(dx, dy);
+      // The fitted exterior lies within 0.2 units of the CAD arc. Its outward
+      // direction distinguishes it from the cut end, aperture and seating faces.
+      if (Math.abs(distance - radius) > .2) continue;
+      const nx = normal.getX(i), ny = normal.getY(i), nz = normal.getZ(i);
+      const horizontal = Math.hypot(nx, ny);
+      if (horizontal < .5 || nx * dx + ny * dy < .9 * horizontal * distance) continue;
+      // Long rim triangles borrow tilt from the adjacent narrow bevel. Keep
+      // upright wall normals in plan and ease into the bevel's axial tilt.
+      const tilt = nz * THREE.MathUtils.smoothstep(Math.abs(nz), .18, .45);
+      const radial = Math.sqrt(1 - tilt * tilt) / distance;
+      normal.setXYZ(i, dx * radial, dy * radial, tilt);
+    }
+    return shape;
+  }
+
   let shell, frame, shellBox, frameBox, unit;
   const hasCAD = Boolean(diffuserGeometry?.getAttribute('position') && frameGeometry?.getAttribute('position'));
   if (hasCAD) {
@@ -118,39 +147,42 @@ export function createBlink1Model(THREE, {
     // unequal-length bounding boxes shifted the plastic over the USB corner.
     offset.y = frameCAD.min.y - rotated.min.y;
     const diffuserToFrame = new THREE.Matrix4().makeTranslation(offset.x, offset.y, offset.z).multiply(rotate);
-    const alignedDiffuser = diffuserCAD.clone().applyMatrix4(diffuserToFrame);
-    // The files have different export axes. Align width/thickness centers and
-    // the real front opening, then fit only the derived metal seating edges.
-    // Source CAD and plastic/engraving vertices are never edited.
-    // A proper half-turn fixes blink(1) at +Y and ThingM at -Y, according to
-    // the project author's original LED address table. Never swap colours to
-    // compensate for the camera. The USB is built separately with its roof up.
-    const world = new THREE.Matrix4().set(
-      0, 1, 0, -center.y,
-      0, 0, -1, alignedDiffuser.max.z,
-      -1, 0, 0, center.x,
-      0, 0, 0, 1,
-    );
-    const rawShellBox = alignedDiffuser.clone().applyMatrix4(world);
-    const rawFrameBox = frameCAD.clone().applyMatrix4(world);
-    // Keep CAD proportions intact and normalize the complete object to ~4.4.
-    // The plug exits the low-Y CAD end, whose aperture is ~12.38 mm wide.
-    unit = 4.4 / (rawShellBox.max.x - rawFrameBox.min.x + 11);
-    const normalized = new THREE.Matrix4().makeScale(unit, unit, unit).multiply(world);
     const seatingShell = diffuserGeometry.clone().applyMatrix4(diffuserToFrame);
-    let seating;
-    try { seating = fitFrameToDiffuser(THREE, frameGeometry, seatingShell); }
-    finally { seatingShell.dispose(); }
-    const transformedFrame = seating.geometry.applyMatrix4(normalized);
-    frame = creasedNormals(transformedFrame);
-    transformedFrame.dispose();
-    const transformed = diffuserGeometry.clone().applyMatrix4(normalized.clone().multiply(diffuserToFrame));
-    shell = creasedNormals(transformed);
-    transformed.dispose();
+    let seating, diffuserProfile;
+    try {
+      seating = fitFrameToDiffuser(THREE, frameGeometry, seatingShell);
+      diffuserProfile = levelEnclosureRails(seatingShell, seating.geometry, frameCAD);
+      const alignedDiffuser = bounds(seatingShell);
+      // A proper half-turn fixes blink(1) at +Y and ThingM at -Y, according to
+      // the project author's original LED address table. Never swap colours to
+      // compensate for the camera. The USB is built separately with its roof up.
+      const world = new THREE.Matrix4().set(
+        0, 1, 0, -center.y,
+        0, 0, -1, alignedDiffuser.max.z,
+        -1, 0, 0, center.x,
+        0, 0, 0, 1,
+      );
+      const rawShellBox = alignedDiffuser.clone().applyMatrix4(world);
+      const rawFrameBox = frameCAD.clone().applyMatrix4(world);
+      // Keep CAD proportions intact and normalize the complete object to ~4.4.
+      // The plug exits the low-Y CAD end, whose aperture is ~12.38 mm wide.
+      unit = 4.4 / (rawShellBox.max.x - rawFrameBox.min.x + 11);
+      const normalized = new THREE.Matrix4().makeScale(unit, unit, unit).multiply(world);
+      // Front-datum distances to the long-side tangent in each v3k mesh.
+      shell = enclosureNormals(seatingShell, frameCAD, 2.79).applyMatrix4(normalized);
+      frame = enclosureNormals(seating.geometry, frameCAD, 2.715).applyMatrix4(normalized);
+    } finally {
+      seatingShell.dispose();
+      seating?.geometry.dispose();
+    }
     shellBox = bounds(shell); frameBox = bounds(frame);
-    group.userData.geometrySource = 'official blink1mk2 enclosure v3k STL; derived metal seating fit';
-    group.userData.assemblyAlignment = 'front datum plus derived frame seating fit; not an engineering assembly constraint';
-    group.userData.enclosureFit = seating.stats;
+    group.userData.geometrySource = 'ThingM v3k enclosure STL with leveled diffuser seats and fitted metal joints';
+    group.userData.assemblyAlignment = 'shared USB front datum and parallel side rails';
+    group.userData.enclosureFit = {
+      ...seating.stats,
+      measurementStage: 'frame joint fit before leveling both parts',
+      diffuserProfile,
+    };
   } else {
     // A small loading/failure fallback. The reviewed renderer supplies both
     // official geometries; this shape is never identified as the official CAD.
@@ -166,6 +198,16 @@ export function createBlink1Model(THREE, {
 
   const shellSize = shellBox.getSize(new THREE.Vector3());
   const midY = (frameBox.min.y + frameBox.max.y) / 2;
+  const midZ = (frameBox.min.z + frameBox.max.z) / 2;
+  // Registration in the v2c6 EAGLE footprint: the mating lip is 17.5 mm
+  // ahead of X1, and L1 and L2 share the same coordinates on opposite faces.
+  const plugEnd = frameBox.min.x - 11 * unit;
+  const plugLength = 17.5 * unit, plugRoot = plugEnd + plugLength;
+  const x1 = pcbLayout.components.find(component => component.ref === 'X1');
+  const boardFront = plugRoot + (pcbLayout.bounds.min[0] - x1.x) * unit;
+  const led = pcbLayout.components.find(component => component.ref === 'L1');
+  const emitterXZ = new THREE.Vector2(plugRoot + (led.x - x1.x) * unit,
+    midZ - (led.y - pcbLayout.coordinate_system.center_y) * unit);
   function finishTexture(kind) {
     const size = 256, data = new Uint8Array(size * size * 4);
     const hash = n => { let v = Math.imul(n ^ 0x9e3779b9, 0x85ebca6b); v ^= v >>> 13; return (v >>> 0) / 4294967295; };
@@ -260,15 +302,17 @@ export function createBlink1Model(THREE, {
       nb1SourceTwo: {value: new THREE.Color(0, 0, 0)},
       nb1ShellMin: {value: shellBox.min.clone()},
       nb1ShellSize: {value: shellSize.clone()},
+      nb1EmitterXZ: {value: emitterXZ},
     },
     fragment: `
       uniform vec3 nb1SourceOne;
       uniform vec3 nb1SourceTwo;
       uniform vec3 nb1ShellMin;
       uniform vec3 nb1ShellSize;
+      uniform vec2 nb1EmitterXZ;
       vec3 nb1LightField(vec3 localPosition) {
         vec3 p = (localPosition - nb1ShellMin) / nb1ShellSize;
-        vec2 plane = (p.xz - 0.5) * 2.0 - vec2(0.12, -0.08);
+        vec2 plane = 2.0 * (localPosition.xz - nb1EmitterXZ) / nb1ShellSize.xz;
         float radius = dot(plane * plane, vec2(1.8, 2.2));
         float radial = 0.72 * exp(-0.55 * radius) + 0.28 * exp(-3.2 * radius);
         float upper = exp(-8.0 * (p.y - 0.8) * (p.y - 0.8));
@@ -301,17 +345,15 @@ export function createBlink1Model(THREE, {
       `)
       .replace('#include <emissivemap_fragment>', 'totalEmissiveRadiance *= nb1Radiance;');
   };
-  plastic.customProgramCacheKey = () => 'nb1-continuous-scattering-v1';
+  plastic.customProgramCacheKey = () => 'nb1-continuous-scattering-v2';
   const graphite = material(new THREE.MeshPhysicalMaterial({
-    color: 0x91999f, metalness: .94, roughness: .64,
-    roughnessMap: metalRoughness, normalMap: metalNormal, normalScale: new THREE.Vector2(.08, .1),
-    anisotropy: 0,
+    color: 0x91999f, metalness: .94, roughness: .62,
   }));
   const steel = material(new THREE.MeshPhysicalMaterial({
     color: 0xb4bcc0, metalness: .96, roughness: .54,
     roughnessMap: metalRoughness, normalMap: metalNormal, normalScale: new THREE.Vector2(.08, .1), anisotropy: 0,
   }));
-  const edgeSteel = material(new THREE.MeshStandardMaterial({ color: 0xc4c9cb, metalness: .9, roughness: .55 }));
+  const solderTail = material(new THREE.MeshStandardMaterial({ color: 0xb9b7ae, metalness: .72, roughness: .3 }));
   const darkPolymer = material(new THREE.MeshStandardMaterial({ color: 0x151d22, metalness: 0, roughness: .84 }));
   const contacts = material(new THREE.MeshStandardMaterial({ color: 0xbca16b, metalness: .88, roughness: .31 }));
   if (showShell) {
@@ -321,65 +363,79 @@ export function createBlink1Model(THREE, {
     geometries.add(frame); geometries.add(shell);
   }
 
-  // USB-A shell: open at the end, with genuine holes cut through its roof.
-  // Values below are millimetres before normalization to the CAD assembly.
+  // The front of the PCB slides between the shield walls.
   const plug = new THREE.Group(); plug.name = 'USB-A plug'; group.add(plug);
-  const plugEnd = frameBox.min.x - 11 * unit;
-  const plugRoot = frameBox.min.x + .65 * unit;
-  const plugLength = plugRoot - plugEnd;
-  const plugCenter = (plugRoot + plugEnd) / 2;
-  const plugWidth = 12 * unit, plugHeight = 4.5 * unit, wall = .26 * unit;
-  const plugBottom = midY - plugHeight / 2;
-  const roof = roundedRectangle(plugLength, plugWidth, .18 * unit);
-  for (const z of [-3.1, 3.1]) {
-    const hole = new THREE.Path(), x = -.9 * unit, centerZ = z * unit;
-    const halfX = 1.22 * unit, halfZ = 1.15 * unit;
-    hole.moveTo(x - halfX, centerZ - halfZ);
-    hole.lineTo(x - halfX, centerZ + halfZ);
-    hole.lineTo(x + halfX, centerZ + halfZ);
-    hole.lineTo(x + halfX, centerZ - halfZ);
-    hole.closePath(); roof.holes.push(hole);
+  const boardTop = midY + pcbLayout.visual_approximations.board_thickness * unit / 2;
+
+  // Nominal mating dimensions from USB-IF Figure 6-9. Two perforated
+  // panels meet the rounded folds at their tangents along the long sides.
+  const halfWidth = 6 * unit, halfHeight = 2.25 * unit;
+  const wall = .315 * unit, radius = .64 * unit;
+  const flat = halfWidth - radius, shoulder = halfHeight - radius;
+  const panel = new THREE.Shape();
+  panel.moveTo(0, -flat); panel.lineTo(plugLength, -flat);
+  panel.lineTo(plugLength, flat); panel.lineTo(0, flat); panel.closePath();
+  for (const offset of [-3, 3]) {
+    const x = 5.16 * unit, z = offset * unit;
+    const hole = new THREE.Path();
+    hole.moveTo(x, z - 1.25 * unit); hole.lineTo(x, z + 1.25 * unit);
+    hole.lineTo(x + 2 * unit, z + 1.25 * unit); hole.lineTo(x + 2 * unit, z - 1.25 * unit);
+    hole.closePath(); panel.holes.push(hole);
   }
-  const roofMesh = add('Perforated steel roof', metalUV(plate(roof, wall, .065 * unit)), steel, plug);
-  roofMesh.position.set(plugCenter, plugBottom + plugHeight - wall, 0);
-  function box(name, x, y, z, cx, cy, cz, surface = steel) {
-    const bevel = Math.min(.075 * unit, Math.min(x, y, z) * .22);
-    const rounded = roundedRectangle(Math.max(.001, x - bevel * 2), Math.max(.001, z - bevel * 2), bevel);
-    const body = plate(rounded, y, bevel); body.translate(0, -y / 2, 0);
-    const result = add(name, metalUV(body), surface, plug);
-    result.position.set(cx, cy, cz); return result;
-  }
-  box('Steel floor', plugLength, wall, plugWidth, plugCenter, plugBottom + wall / 2, 0);
-  for (const sign of [-1, 1]) box('Folded side wall', plugLength, plugHeight - wall, wall, plugCenter, midY - wall / 2, sign * (plugWidth - wall) / 2);
-  // Four narrow front edges expose the open rectangular socket and sheet thickness.
-  const edge = .13 * unit;
+  const face = metalUV(plate(panel, wall));
+  add('Perforated steel roof', face, steel, plug).position.set(plugEnd, midY + halfHeight - wall, 0);
+  add('Steel floor', face, steel, plug).position.set(plugEnd, midY - halfHeight, 0);
+
+  const bend = new THREE.Shape();
+  bend.moveTo(flat, halfHeight); bend.absarc(flat, shoulder, radius, Math.PI / 2, 0, true);
+  bend.lineTo(halfWidth, -shoulder); bend.absarc(flat, -shoulder, radius, 0, -Math.PI / 2, true);
+  bend.lineTo(flat, -halfHeight + wall); bend.absarc(flat, -shoulder, radius - wall, -Math.PI / 2, 0, false);
+  bend.lineTo(halfWidth - wall, shoulder); bend.absarc(flat, shoulder, radius - wall, 0, Math.PI / 2, false);
+  bend.closePath();
+  const folded = new THREE.ExtrudeGeometry(bend, {depth: plugLength, bevelEnabled: false, curveSegments: 12});
+  folded.rotateY(-Math.PI / 2);
+  const side = metalUV(creasedNormals(folded));
+  folded.dispose();
   for (const sign of [-1, 1]) {
-    box('Exposed end edge', edge, wall, plugWidth, plugEnd, midY + sign * (plugHeight - wall) / 2, 0, edgeSteel);
-    box('Exposed side edge', edge, plugHeight - wall * 2, wall, plugEnd, midY, sign * (plugWidth - wall) / 2, edgeSteel);
+    const mesh = add('Folded side wall', side, steel, plug);
+    mesh.position.set(plugRoot, midY, 0);
+    if (sign < 0) mesh.rotation.x = Math.PI;
   }
-  box('Rear insulating wall', .28 * unit, plugHeight - wall * 2, plugWidth - wall * 2, plugRoot, midY, 0, darkPolymer);
-  const tongueLength = plugLength - 1.45 * unit;
-  const tongueCenter = plugRoot - tongueLength / 2;
-  const tongueTop = plugBottom + 3.3 * unit;
-  const interior = [box('Black recessed tongue', tongueLength, 1.45 * unit, 9.6 * unit, tongueCenter, tongueTop - .725 * unit, 0, darkPolymer)];
-  for (let i = 0; i < 4; i++) {
-    interior.push(box('Recessed contact ' + (i + 1), 6.5 * unit, .09 * unit, 1 * unit,
-      plugRoot - 4.55 * unit, tongueTop - 1.5 * unit, (i - 1.5) * 2.35 * unit, contacts));
+
+  // The black carrier sits against the ThingM-side inner wall. Its nose
+  // chamfer and rear termination are approximated from the Molex connector.
+  const insideTop = midY + halfHeight - wall, insideBottom = midY - halfHeight + wall;
+  const tongueTop = insideTop - 1.95 * unit, nose = plugEnd + .5 * unit;
+  const carrierWidth = 10.5 * unit, carrier = new THREE.Shape();
+  carrier.moveTo(nose, insideBottom); carrier.lineTo(boardFront, insideBottom);
+  carrier.lineTo(boardFront, insideTop); carrier.lineTo(boardFront - .3 * unit, insideTop);
+  carrier.lineTo(boardFront - .3 * unit, tongueTop); carrier.lineTo(nose + .35 * unit, tongueTop);
+  carrier.lineTo(nose, tongueTop - .25 * unit); carrier.closePath();
+  const tongue = new THREE.ExtrudeGeometry(carrier, {depth: carrierWidth, bevelEnabled: false});
+  add('Black recessed tongue', tongue, darkPolymer, plug).position.z = -carrierWidth / 2;
+
+  function plugBox(name, length, height, width, x, y, z, surface) {
+    const mesh = add(name, new THREE.BoxGeometry(length, height, width), surface, plug);
+    mesh.position.set(x, y, z);
   }
-  // User-verified USB orientation: blink(1)/+Y looks into the open half;
-  // the tongue belongs to ThingM/-Y and its four contacts face the +Y cavity.
-  // Turn only these five internal parts about the plug's longitudinal axis.
-  const turnInterior = new THREE.Matrix4().makeTranslation(0, midY, 0)
-    .multiply(new THREE.Matrix4().makeRotationX(Math.PI))
-    .multiply(new THREE.Matrix4().makeTranslation(0, -midY, 0));
-  for (const part of interior) part.applyMatrix4(turnInterior);
+  const carrierRear = plugEnd + 18.8 * unit;
+  plugBox('Rear insulator', carrierRear - boardFront, insideTop - boardTop, carrierWidth,
+    (carrierRear + boardFront) / 2, (insideTop + boardTop) / 2, 0, darkPolymer);
+  const contactRear = plugEnd + 8.65 * unit, tailEnd = plugRoot + 2.6 * unit;
+  for (const [index, offset] of [3.5, 1, -1, -3.5].entries()) {
+    const length = (Math.abs(offset) > 1 ? 7.41 : 6.41) * unit;
+    plugBox('Recessed contact ' + (index + 1), length, .08 * unit, unit,
+      contactRear - length / 2, tongueTop + .04 * unit, offset * unit, contacts);
+    plugBox('X1 solder tail ' + (index + 1), tailEnd - carrierRear, .12 * unit, .65 * unit,
+      (tailEnd + carrierRear) / 2, boardTop + .09 * unit, offset * unit, solderTail);
+  }
   group.userData.usbInterior = { openFace: '+y', tongueFace: '-y', contactFace: '+y', midplaneY: midY };
 
   const pcbModel = showPCB ? createBlink1PCB(THREE, {
     unit,
-    originX: frameBox.min.x + .65 * unit,
+    originX: boardFront,
     centerY: midY,
-    centerZ: (frameBox.min.z + frameBox.max.z) / 2,
+    centerZ: midZ,
   }) : null;
   if (pcbModel) group.add(pcbModel.group);
 
@@ -391,8 +447,8 @@ export function createBlink1Model(THREE, {
   const upperLight = new THREE.PointLight(0xffffff, 0, spillDistance, 2);
   const lowerLight = new THREE.PointLight(0xffffff, 0, spillDistance, 2);
   upperLight.name = 'LED 1 — top'; lowerLight.name = 'LED 2 — bottom';
-  upperLight.position.set(0, frameBox.max.y + .18 * unit, 0);
-  lowerLight.position.set(0, frameBox.min.y - .18 * unit, 0);
+  upperLight.position.set(emitterXZ.x, frameBox.max.y + .18 * unit, emitterXZ.y);
+  lowerLight.position.set(emitterXZ.x, frameBox.min.y - .18 * unit, emitterXZ.y);
   group.add(upperLight, lowerLight);
   group.userData.ledPlacement = 'independent top/bottom PCB faces; not side-by-side bulbs';
   group.userData.ledFaces = {

@@ -20,8 +20,8 @@ export function createBlink1PCB(THREE, {unit, originX, centerY, centerZ}) {
   const boardThickness = layout.visual_approximations.board_thickness;
   const boardBottom = centerY - boardThickness * unit / 2;
   const mmX = value => (value - minX) * unit;
-  const mmZ = value => -(value - layout.coordinate_system.center_y) * unit;
-  const point = (x, y) => ({x: originX + mmX(x), z: centerZ + mmZ(y)});
+  const mmY = value => (value - layout.coordinate_system.center_y) * unit;
+  const point = (x, y) => ({x: originX + mmX(x), z: centerZ - mmY(y)});
   const sideSign = side => side === 'top' ? 1 : -1;
 
   function makeMaterial(Material, options) {
@@ -44,7 +44,8 @@ export function createBlink1PCB(THREE, {unit, originX, centerY, centerZ}) {
   }
   function pcbShape() {
     const shape = new THREE.Shape();
-    const xy = ([x, y]) => [(x - minX) * unit, -(y - layout.coordinate_system.center_y) * unit];
+    // Extrude in the EAGLE XY plane. The board's -90° rotation maps +Y to -Z.
+    const xy = ([x, y]) => [mmX(x), mmY(y)];
     for (const command of layout.outline) {
       if (command.op === 'move') {
         const [x, y] = xy(command.to); shape.moveTo(x, y);
@@ -52,16 +53,14 @@ export function createBlink1PCB(THREE, {unit, originX, centerY, centerZ}) {
         const [x, y] = xy(command.to); shape.lineTo(x, y);
       } else if (command.op === 'arc') {
         const [x, y] = xy(command.center);
-        const start = -THREE.MathUtils.degToRad(command.start);
-        const end = -THREE.MathUtils.degToRad(command.end);
-        shape.absarc(x, y, command.radius * unit, start, end, true);
+        const start = THREE.MathUtils.degToRad(command.start);
+        const end = THREE.MathUtils.degToRad(command.end);
+        shape.absarc(x, y, command.radius * unit, start, end, false);
       } else if (command.op === 'close') shape.closePath();
     }
     for (const hole of layout.holes) {
-      const x = mmX(hole.x);
-      const y = -(hole.y - layout.coordinate_system.center_y) * unit;
       const holePath = new THREE.Path();
-      holePath.absarc(x, y, hole.drill * unit / 2, 0, Math.PI * 2, false);
+      holePath.absarc(mmX(hole.x), mmY(hole.y), hole.drill * unit / 2, 0, Math.PI * 2, true);
       shape.holes.push(holePath);
     }
     return shape;
@@ -87,10 +86,8 @@ export function createBlink1PCB(THREE, {unit, originX, centerY, centerZ}) {
     color: 0x17191a, metalness: .12, roughness: .36, clearcoat: .16,
   });
   const markMaterial = makeMaterial(THREE.MeshBasicMaterial, {color: 0xb0493d});
-  const lensMaterial = makeMaterial(THREE.MeshPhysicalMaterial, {
-    color: 0xf8f6ec, metalness: 0, roughness: .28, transmission: .22,
-    thickness: .14, ior: 1.45, side: THREE.DoubleSide,
-  });
+  const packageMaterial = makeMaterial(THREE.MeshStandardMaterial, {color: 0xf8f6ec, roughness: .48});
+  const unlitLens = 0xdddcd5;
 
   const boardGeometry = new THREE.ExtrudeGeometry(pcbShape(), {
     depth: boardThickness * unit, bevelEnabled: false, curveSegments: 12,
@@ -119,7 +116,7 @@ export function createBlink1PCB(THREE, {unit, originX, centerY, centerZ}) {
     const shape = new THREE.ExtrudeGeometry(outer, {
       depth: .035 * unit, bevelEnabled: false, curveSegments: 20,
     });
-    shape.rotateX(-Math.PI / 2);
+    shape.rotateX(-sideSign(side) * Math.PI / 2);
     const object = mesh(name, shape, copper);
     object.position.set(location.x, surfaceY(side, .005), location.z);
     return object;
@@ -164,15 +161,12 @@ export function createBlink1PCB(THREE, {unit, originX, centerY, centerZ}) {
       continue;
     }
     if (component.kind === 'testpad') {
-      const radius = .55 * unit;
-      const pad = mesh('P1 exposed test pad',
-        new THREE.CylinderGeometry(radius, radius, .035 * unit, 24), copper);
-      pad.position.set(location.x, surface + sign * .02 * unit, location.z);
+      addSmdPad('P1 exposed test pad', component.x, component.y, component.side, 1.1, 1.1);
       continue;
     }
     if (component.kind === 'rgb-led') {
       // The two 5050 packages occupy the same XY position on opposite PCB
-      // faces. Each gets its own white package, cover, and variable RGB emitter.
+      // faces. Each white package has one circular optical window.
       const [width, height, depth] = component.body;
       const padOffsets = [[-2.45, -1.65], [2.45, -1.65], [-2.45, 1.65], [2.45, 1.65]];
       for (let i = 0; i < padOffsets.length; i++) {
@@ -182,17 +176,16 @@ export function createBlink1PCB(THREE, {unit, originX, centerY, centerZ}) {
       }
       const bodyCenter = surface + sign * (height / 2 + .025) * unit;
       box(`${component.ref} WS2812B package`, location.x, bodyCenter, location.z,
-        width, height, depth, lensMaterial);
-      const lensCenter = bodyCenter + sign * height * .47 * unit;
-      box(`${component.ref} LED optic`, location.x, lensCenter, location.z,
-        3.25, .12, 3.25, lensMaterial);
-      const emitterY = lensCenter + sign * .075 * unit;
+        width, height, depth, packageMaterial);
+      // The v2c6 WS2812B package drawing gives the window radius in mm.
+      const radius = 1.7204625 * unit;
       const emitterMaterial = makeMaterial(THREE.MeshStandardMaterial, {
-        color: 0x101010, emissive: 0x000000, roughness: .36, metalness: .05,
+        color: unlitLens, emissive: 0x000000, roughness: .32, metalness: 0,
         emissiveIntensity: 0,
       });
-      const emitter = box(`${component.ref} RGB emitter`, location.x, emitterY, location.z,
-        1.2, .08, 1.2, emitterMaterial);
+      const emitter = mesh(`${component.ref} RGB emitter`,
+        new THREE.CylinderGeometry(radius, radius, .04 * unit, 48), emitterMaterial);
+      emitter.position.set(location.x, bodyCenter + sign * height * unit / 2, location.z);
       ledEmitters.set(component.ref, emitter.material);
       continue;
     }
@@ -207,15 +200,15 @@ export function createBlink1PCB(THREE, {unit, originX, centerY, centerZ}) {
           addSmdPad(`U1 QFN perimeter land`, component.x + left.x,
             component.y + left.z, component.side, .8, .35, angle);
           addSmdPad(`U1 QFN perimeter land`, component.x + top.x,
-            component.y + top.z, component.side, .8, .35, angle);
+            component.y + top.z, component.side, .8, .35, angle + 90);
         }
       }
       const centerY = surface + sign * (height / 2 + .025) * unit;
       box('U1 PIC16F1455ML QFN16', location.x, centerY, location.z,
         width, height, depth, chipBody);
       box('U1 pin 1 mark',
-        location.x - .9 * unit, centerY + sign * (height / 2 + .01) * unit,
-        location.z + .9 * unit, .28, .025, .28, markMaterial);
+        location.x + .9 * unit, centerY + sign * (height / 2 + .01) * unit,
+        location.z - .9 * unit, .28, .025, .28, markMaterial);
       continue;
     }
     if (component.kind === 'capacitor' || component.kind === 'resistor') {
@@ -250,13 +243,15 @@ export function createBlink1PCB(THREE, {unit, originX, centerY, centerZ}) {
     if (!context) return null;
     const sx = canvas.width / boardWidth, sy = canvas.height / boardLength;
     context.fillStyle = '#242629';
-    context.textBaseline = 'middle';
+    context.textBaseline = 'alphabetic';
     for (const mark of layout.silkscreen.filter(value => value.side === side)) {
       const x = (mark.x - minX) * sx;
-      const y = (maxY - mark.y) * sy;
+      // Each canvas is viewed from its own side. Turning the plane over
+      // reverses its vertical texture axis relative to EAGLE coordinates.
+      const y = (side === 'top' ? maxY - mark.y : mark.y - minY) * sy;
       context.save();
       context.translate(x, y);
-      context.rotate(-THREE.MathUtils.degToRad(mark.rotation || 0));
+      context.rotate(-sideSign(side) * THREE.MathUtils.degToRad(mark.rotation || 0));
       context.font = `600 ${Math.max(12, mark.size * sx)}px Arial, sans-serif`;
       context.fillText(mark.text, 0, 0);
       context.restore();
@@ -287,10 +282,10 @@ export function createBlink1PCB(THREE, {unit, originX, centerY, centerZ}) {
     for (const [ref, color] of [['L1', one], ['L2', two]]) {
       const surface = ledEmitters.get(ref);
       if (!surface) continue;
-      const value = active && color ? color : '#000000';
-      surface.color.set(value);
-      surface.emissive.set(value);
-      surface.emissiveIntensity = active && color ? 2.4 : 0;
+      const lit = active && color && color !== '#000000';
+      surface.color.set(lit ? color : unlitLens);
+      surface.emissive.set(lit ? color : 0x000000);
+      surface.emissiveIntensity = lit ? 2.4 : 0;
     }
   }
   function dispose() {

@@ -1,8 +1,8 @@
 /* Visual mating fit for the separately exported official enclosure meshes.
  * The caller supplies common-CAD coordinates, with the diffuser's USB/front
  * min-Y datum aligned to the frame. This is not an engineering assembly file.
- * Only the returned frame derivative changes. Plastic, engraving and source assets
- * are untouched; no cover, trim strip or additional surface is introduced.
+ * The joined display meshes are leveled together to keep their mating faces
+ * in contact around the USB shoulders and the rounded rear.
  */
 
 const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
@@ -67,6 +67,40 @@ function intersectionIndex(geometry, axis, cellSize = .5) {
     },
     get queries() { return queries; },
   };
+}
+
+// The two long seats of the v3k diffuser diverge towards the return. Measure
+// each plane at two sections on a straight rail, away from the USB roundover
+// and rear bend. Level both display copies in frame axes after seating:
+// the two materials must undergo the same displacement at each joint.
+export function levelEnclosureRails(diffuser, fittedFrame, frameBox) {
+  const depth = frameBox.max.y - frameBox.min.y;
+  const x = frameBox.max.x - .03;
+  const frontY = frameBox.min.y + depth * .25;
+  const rearY = frameBox.min.y + depth * .65;
+  const sections = intersectionIndex(diffuser, 2);
+  const front = sections.at(x, frontY), rear = sections.at(x, rearY);
+  // Two skins give four ordered intersections: outside, seat, seat, outside.
+  if (front.length !== 4 || rear.length !== 4) return null;
+  const lowerSlope = (rear[1] - front[1]) / (rearY - frontY);
+  const upperSlope = (rear[2] - front[2]) / (rearY - frontY);
+  for (const part of [diffuser, fittedFrame]) {
+    const position = part.getAttribute('position');
+    for (let i = 0; i < position.count; i++) {
+      const dy = position.getY(i) - frontY, z = position.getZ(i);
+      const lower = front[1] + lowerSlope * dy, upper = front[2] + upperSlope * dy;
+      // Translate the full thickness of each skin, including the lettering.
+      // Blend across the middle of the cavity where the skins join at the tail.
+      const blend = smooth(2 * (z - lower) / (upper - lower) - .5);
+      const shift = (1 - blend) * (frameBox.min.z - lower) + blend * (frameBox.max.z - upper);
+      position.setZ(i, z + shift);
+    }
+    position.needsUpdate = true;
+    part.computeBoundingBox();
+    part.computeBoundingSphere();
+  }
+  return {sampleX: x, frontY, rearY, lowerSlope, upperSlope,
+    lowerSeatZ: frameBox.min.z, upperSeatZ: frameBox.max.z};
 }
 
 // Refine shared edges together, so projecting a curved mating boundary never

@@ -9,12 +9,12 @@
   },
   "files": {
     "enclosure-fit.js": {
-      "bytes": 21789,
-      "sha256": "33a8c0fba98e078b9497da20289508ff5da08a4cfccc8abafbeec36a336ece99"
+      "bytes": 23583,
+      "sha256": "fac86effa1a60b254c3d0023f30203095f8d3ad8be117d820c924c75e0e5384b"
     },
     "light-model.js": {
-      "bytes": 24265,
-      "sha256": "c24895a6995bdb256c10de005d1a04e686d8313b78319387bfa5b62b7415d48b"
+      "bytes": 27326,
+      "sha256": "5558a0bfb8b9b698f7094e9a53bd980e22842d9e3367edf9d9ab6b66212c3dbe"
     },
     "model-assets/LICENSE.txt": {
       "bytes": 351,
@@ -33,20 +33,20 @@
       "sha256": "ba0797af2873c0fc4c3477b87cde07ca1b9ec761eda001b21abe101ce035b465"
     },
     "model-assets/pcb-layout.json": {
-      "bytes": 6477,
-      "sha256": "10f9c36aa2a65d3313b1783d0132351141acfe173d54687221525c16dd26a417"
+      "bytes": 6440,
+      "sha256": "2a743365954476f498b733d4e84159c8a9e6b0cd2327f1bd4910903ab170748f"
     },
     "model-assets/seating-fit.json": {
-      "bytes": 3399,
-      "sha256": "04516bf501b32ff8667a1738a99fad4cfde10cb5bcfc30836841115111d0c3c5"
+      "bytes": 4073,
+      "sha256": "764b507f5b94f71b2ccae88a98cbcede02e705b7b9deadddd077a6021a5aa89f"
     },
     "model-assets/source.json": {
-      "bytes": 17236,
-      "sha256": "30b20c6c11d00d93a85041465edb77bbef413fb5b434376c1c2ce1945b595dbd"
+      "bytes": 20138,
+      "sha256": "c184ff1a5f3b1f142ea7417dd0feb01e88b0022b2971d42b89409fe1f8711740"
     },
     "pcb-model.js": {
-      "bytes": 13768,
-      "sha256": "bdb5a04a08b29069cbf59e6039394e47a0f394aa82925e34a2a9f77c2688697f"
+      "bytes": 13721,
+      "sha256": "ed3b1c05bfecd3dcc0f5655f501c72824c32337c82a10ff3f960cfdb275a5232"
     }
   }
 }

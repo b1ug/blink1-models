@@ -362,7 +362,7 @@
     }
   ],
   "visual_approximations": {
-    "board_thickness": 0.8,
-    "note": "PCB thickness and component heights are visual estimates. EAGLE board coordinates and footprints are retained; verify the populated assembly against the user's physical reference images."
+    "board_thickness": 1.5723,
+    "note": "Nominal thickness from the v2c6 two-layer EAGLE stack: 1.5011 mm dielectric and two 0.0356 mm copper layers. Package heights are visual estimates."
   }
 }
