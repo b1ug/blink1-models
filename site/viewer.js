@@ -2,18 +2,24 @@ import * as THREE from 'three';
 import {OrbitControls} from './vendor/OrbitControls.js';
 import {STLLoader} from './vendor/STLLoader.js';
 import {createBlink1Model} from './models/mk2/light-model.js';
+import {createCutaway} from './cutaway.js';
 
 const canvas = document.querySelector('#model');
 const status = document.querySelector('#status');
 const reset = document.querySelector('#reset');
 const variantButtons = [...document.querySelectorAll('[data-variant]')];
+const ledControls = document.querySelector('#led-controls');
+const leds = [...ledControls.querySelectorAll('.led')].map(row => ({
+  power: row.querySelector('[type="checkbox"]'),
+  color: row.querySelector('[type="color"]'),
+}));
 async function start() {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = .9;
+  renderer.toneMappingExposure = .65;
   const scene = new THREE.Scene();
-  // Same broad reflection cards, exposure and lights on both versions.
+  // Keep the studio lighting fixed as the LEDs and model view change.
   const room = new THREE.Scene();
   room.background = new THREE.Color(.3, .32, .34);
   for (const [x, y, z, w, h, r, g, b] of [
@@ -30,16 +36,16 @@ async function start() {
   const generator = new THREE.PMREMGenerator(renderer);
   const environment = generator.fromScene(room, .04);
   scene.environment = environment.texture;
-  scene.environmentIntensity = .75;
+  scene.environmentIntensity = .42;
   generator.dispose();
   for (const card of room.children) {
     card.geometry.dispose();
     card.material.dispose();
   }
-  scene.add(new THREE.HemisphereLight(0xfffdf8, 0xc2d0d8, .45));
-  const key = new THREE.DirectionalLight(0xfffcf6, 1.15);
+  scene.add(new THREE.HemisphereLight(0xfffdf8, 0xc2d0d8, .24));
+  const key = new THREE.DirectionalLight(0xfffcf6, .62);
   key.position.set(-3, 7, 5);
-  const fill = new THREE.DirectionalLight(0xe6f2ff, .45);
+  const fill = new THREE.DirectionalLight(0xe6f2ff, .24);
   fill.position.set(4, 2, -4);
   scene.add(key, fill);
 
@@ -53,24 +59,39 @@ async function start() {
   const [diffuserGeometry, frameGeometry] = await Promise.all(['diffuser', 'frame'].map(part =>
     loader.loadAsync(new URL('./models/mk2/model-assets/blink1mk2_enclosure_' + part + '_v3k.stl', import.meta.url).href)
   ));
-  let model = null, viewRadius = 1;
+  let model = null, cutaway = null, viewRadius = 1, currentView = null;
   function render() { renderer.render(scene, camera); }
-  function showVariant(variant) {
-    const direction = model
-      ? camera.position.clone().sub(orbit.target).normalize()
-      : new THREE.Vector3(-5.5, 7.5, 11).normalize();
-    model?.dispose();
-    model = createBlink1Model(THREE, {diffuserGeometry, frameGeometry, variant});
-    model.group.rotation.set(.035, -.12, .1);
-    scene.add(model.group);
-    const bounds = new THREE.Box3().setFromObject(model.group).getBoundingSphere(new THREE.Sphere());
-    viewRadius = bounds.radius * 1.08;
-    orbit.target.copy(bounds.center);
-    camera.position.copy(bounds.center).addScaledVector(direction, viewRadius * 5.5);
-    orbit.update();
-    orbit.saveState();
+  function updateLeds() {
+    const [one, two] = leds.map(led => led.power.checked ? led.color.value : null);
+    model.setColors(one, two, ledControls.disabled ? 'none' : 'preview');
+  }
+  function showVariant(view) {
+    if (currentView === view) return;
+    const variant = view === 'cutaway' ? 'assembled' : view;
+    if (model?.group.userData.variant !== variant) {
+      const direction = model
+        ? camera.position.clone().sub(orbit.target).normalize()
+        : new THREE.Vector3(-4.5, 5.6, 11).normalize();
+      cutaway?.dispose();
+      cutaway = null;
+      model?.dispose();
+      model = createBlink1Model(THREE, {diffuserGeometry, frameGeometry, variant});
+      ledControls.disabled = variant === 'shell';
+      updateLeds();
+      model.group.rotation.set(.035, -.12, .1);
+      scene.add(model.group);
+      const bounds = new THREE.Box3().setFromObject(model.group).getBoundingSphere(new THREE.Sphere());
+      viewRadius = bounds.radius * 1.08;
+      orbit.target.copy(bounds.center);
+      camera.position.copy(bounds.center).addScaledVector(direction, viewRadius * 5.5);
+      orbit.update();
+      orbit.saveState();
+    }
+    if (view === 'cutaway' && !cutaway) cutaway = createCutaway(THREE, model.group);
+    cutaway?.setEnabled(view === 'cutaway');
+    currentView = view;
     for (const button of variantButtons) {
-      button.setAttribute('aria-pressed', String(button.dataset.variant === variant));
+      button.setAttribute('aria-pressed', String(button.dataset.variant === view));
     }
     resize();
   }
@@ -80,7 +101,7 @@ async function start() {
     if (!w || !h) return;
     renderer.setSize(w, h, false);
     const aspect = w / h;
-    const halfHeight = viewRadius / Math.min(1, aspect);
+    const halfHeight = viewRadius / Math.min(1.28, aspect);
     camera.top = halfHeight;
     camera.bottom = -halfHeight;
     camera.left = -halfHeight * aspect;
@@ -112,23 +133,33 @@ async function start() {
 
   orbit.addEventListener('change', render);
   reset.addEventListener('click', () => orbit.reset());
+  ledControls.addEventListener('input', () => {
+    updateLeds();
+    render();
+  });
   for (const button of variantButtons) {
     button.addEventListener('click', () => showVariant(button.dataset.variant));
     button.disabled = false;
   }
-  new ResizeObserver(resize).observe(canvas);
+  const observer = new ResizeObserver(resize);
+  observer.observe(canvas);
   reset.disabled = false;
   status.hidden = true;
   canvas.addEventListener('webglcontextlost', () => {
     status.hidden = false;
     status.textContent = 'Graphics paused. Reload to restore the view.';
   });
-  showVariant('shell');
-  window.addEventListener('pagehide', () => {
+  showVariant('assembled');
+  window.addEventListener('pagehide', event => {
+    if (event.persisted) return;
+    observer.disconnect();
+    orbit.dispose();
+    cutaway?.dispose();
     model?.dispose();
     diffuserGeometry.dispose(); frameGeometry.dispose();
+    environment.dispose();
     renderer.dispose();
-  }, {once: true});
+  });
 }
 start().catch(() => {
   status.hidden = false;

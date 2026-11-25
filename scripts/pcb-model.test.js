@@ -4,17 +4,59 @@ import test from 'node:test';
 import * as THREE from '../site/node_modules/three/build/three.module.js';
 import {STLLoader} from '../site/node_modules/three/examples/jsm/loaders/STLLoader.js';
 import {createBlink1Model} from '../models/mk2/light-model.js';
+import {createBlink1PCB, getBlink1LEDSources} from '../models/mk2/pcb-model.js';
 import layout from '../models/mk2/model-assets/pcb-layout.json' with {type: 'json'};
 
-test('PCB holes, pads and both LED windows match the v2c6 footprints', t => {
+test('the two resin windows transmit light from independent RGB dies', t => {
+  const placement = {unit: .23, originX: 4, centerY: -.38, centerZ: .62};
+  const sources = getBlink1LEDSources(THREE, placement);
+  const pcb = createBlink1PCB(THREE, placement, sources);
+  t.after(() => pcb.dispose());
+  pcb.group.updateMatrixWorld(true);
+  assert.deepEqual(sources.map(source => source.ref), ['L1', 'L2']);
+  const ray = new THREE.Raycaster();
+  pcb.setColors(new THREE.Color(1, 0, 0), new THREE.Color(0, 0, 1), true);
+  for (const source of sources) {
+    const optic = pcb.group.getObjectByName(`${source.ref} RGB emitter`);
+    const sign = source.ref === 'L1' ? 1 : -1;
+    assert.deepEqual(source.normal.toArray(), [0, sign, 0]);
+    assert.ok(optic.material.transmission > 0);
+    assert.ok(optic.position.distanceTo(source.position) < 1e-8);
+    assert.ok(Math.abs(optic.geometry.parameters.radius - source.radius) < 1e-8);
+    const inward = source.normal.clone().negate();
+    for (const [index, channel] of ['R', 'G', 'B'].entries()) {
+      const die = pcb.group.getObjectByName(`${source.ref} ${channel} die`);
+      const origin = die.position.clone().addScaledVector(source.normal, placement.unit);
+      ray.set(origin, inward);
+      const hits = ray.intersectObjects(pcb.group.children, false);
+      assert.equal(hits[0].object, optic);
+      assert.equal(hits[1].object, die);
+      assert.equal(die.material.emissiveIntensity > 0, index === (sign > 0 ? 0 : 2));
+    }
+  }
+  const green = pcb.group.getObjectByName('L1 G die').material;
+  pcb.setColors(new THREE.Color(0, 1, 0), null, true);
+  const full = green.emissiveIntensity;
+  pcb.setColors(new THREE.Color(0, 128 / 255, 0), null, true);
+  assert.ok(full > 0 && Math.abs(green.emissiveIntensity / full - 128 / 255) < 1e-8);
+  assert.equal(pcb.group.getObjectByName('L1 R die').material.emissiveIntensity, 0);
+  assert.equal(pcb.group.getObjectByName('L2 B die').material.emissiveIntensity, 0);
+  pcb.setColors(new THREE.Color(1, 1, 1), new THREE.Color(1, 1, 1), false);
+  assert.equal(pcb.group.getObjectByName('L1 G die').material.emissiveIntensity, 0);
+  assert.equal(pcb.group.getObjectByName('L2 RGB emitter').material.emissiveIntensity, 0);
+});
+
+test('v2c6 LED footprints register the bare sources and drive both exterior diffuser faces', t => {
   function load(part) {
     const url = new URL(`../models/mk2/model-assets/blink1mk2_enclosure_${part}_v3k.stl`, import.meta.url);
     const geometry = new STLLoader().parse(readFileSync(url, 'utf8'));
     t.after(() => geometry.dispose());
     return geometry;
   }
-  const model = createBlink1Model(THREE, {variant: 'assembled', frameGeometry: load('frame'), diffuserGeometry: load('diffuser')});
-  t.after(() => model.dispose());
+  const cad = {frameGeometry: load('frame'), diffuserGeometry: load('diffuser')};
+  const model = createBlink1Model(THREE, {...cad, variant: 'assembled'});
+  const bare = createBlink1Model(THREE, {...cad, variant: 'internals'});
+  t.after(() => { model.dispose(); bare.dispose(); });
   model.group.updateMatrixWorld(true);
   const board = model.group.getObjectByName('White solder-mask PCB');
   const parts = board.parent;
@@ -23,7 +65,17 @@ test('PCB holes, pads and both LED windows match the v2c6 footprints', t => {
   const center = bounds.getCenter(new THREE.Vector3());
   const ray = new THREE.Raycaster();
   const diffuser = model.group.getObjectByName('One continuous milky diffuser');
-  const glowCenter = diffuser.material.userData.lightField.uniforms.nb1EmitterXZ.value;
+  const shellBounds = new THREE.Box3().setFromObject(diffuser);
+  const bareLights = bare.group.children.filter(part => part.isSpotLight);
+  const exteriorLights = model.group.children.filter(part => part.isSpotLight);
+  assert.equal(bareLights.length, 2);
+  assert.equal(exteriorLights.length, 2);
+  const transfer = diffuser.material.userData.lightField.uniforms.nb1Transfer.value;
+  assert.ok(transfer.isData3DTexture);
+  assert.equal(transfer.format, THREE.RGFormat);
+  const sources = getBlink1LEDSources(THREE, {
+    unit, originX: bounds.min.x, centerY: center.y, centerZ: center.z,
+  });
   // Shoot straight through the board at an EAGLE XY coordinate.
   function hit(x, y, sign, targets = parts.children) {
     const origin = new THREE.Vector3(bounds.min.x + (x - layout.bounds.min[0]) * unit,
@@ -46,10 +98,18 @@ test('PCB holes, pads and both LED windows match the v2c6 footprints', t => {
     const led = layout.components.find(c => c.kind === 'rgb-led' && c.side === side);
     const optic = hit(led.x + 1.5, led.y, sign)?.object;
     assert.equal(optic?.name, `${led.ref} RGB emitter`);
-    const spill = model.group.children.find(part => part.isPointLight &&
-      sign * (part.position.y - center.y) > 0);
-    assert.ok(Math.hypot(spill.position.x - optic.position.x, spill.position.z - optic.position.z) < .00001);
-    assert.ok(Math.hypot(glowCenter.x - optic.position.x, glowCenter.y - optic.position.z) < .00001);
+    const source = sources.find(source => source.ref === led.ref);
+    const bareOptic = bare.group.getObjectByName(`${led.ref} RGB emitter`);
+    const onSide = light => sign * (light.position.y - center.y) > 0;
+    const direct = bareLights.find(onSide), spill = exteriorLights.find(onSide);
+    assert.ok(optic.position.distanceTo(source.position) < .00001);
+    assert.ok(direct.position.distanceTo(bareOptic.position) < .00001);
+    assert.ok(direct.position.distanceTo(source.position) < .00001);
+    const outerY = sign > 0 ? shellBounds.max.y : shellBounds.min.y;
+    assert.ok((spill.position.y - outerY) * sign > 0);
+    for (const light of [direct, spill]) {
+      assert.ok(light.target.position.clone().sub(light.position).normalize().dot(source.normal) > .9999);
+    }
     assert.equal(hit(led.x + 1.5, led.y + 1.5, sign)?.object.name, `${led.ref} WS2812B package`);
     // The circular window must clear the inside of the closed diffuser.
     const lens = new THREE.Box3().setFromObject(optic);
@@ -66,6 +126,15 @@ test('PCB holes, pads and both LED windows match the v2c6 footprints', t => {
     assert.equal(optic.material.emissiveIntensity, 0);
     assert.equal(optic.material.color.getHex(), unlit);
   }
+  const top = exteriorLights.find(light => light.position.y > center.y);
+  const bottom = exteriorLights.find(light => light.position.y < center.y);
+  model.setColors('#ff0000', '#0000ff', 'preview');
+  assert.ok(top.intensity * top.color.r > bottom.intensity * bottom.color.r);
+  assert.ok(bottom.intensity * bottom.color.b > top.intensity * top.color.b);
+  assert.equal(top.color.g + bottom.color.g, 0);
+  model.setColors('#000000', '#000000', 'preview');
+  assert.equal(top.intensity, 0);
+  assert.equal(bottom.intensity, 0);
   const testpad = layout.components.find(c => c.ref === 'P1');
   assert.equal(hit(testpad.x + .49, testpad.y + .49, 1)?.object.name, 'P1 exposed test pad');
 });
