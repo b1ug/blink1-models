@@ -1,6 +1,6 @@
 # blink(1) Models
 
-The viewer opens with the blink(1) mk2 assembled and both PCB LEDs on. Use the checkbox and color picker for each LED to see its contribution to the diffuser. **Cutaway** opens a lengthwise section through the frame and diffuser, exposing the board and LED windows while showing the light field calculated for the closed assembly. **PCB only** shows the exposed board and **Empty shell** shows the unlit enclosure. The controls remember your choices as you switch views. The interactive viewer requires WebGL 2. [Open the model viewer](https://b1ug.github.io/blink1-models/)
+The viewer opens with the blink(1) mk2 assembled and both PCB LEDs on. Use the checkbox and color picker for each LED to see its contribution to the diffuser. **Side view** turns the near metal rail toward the camera. Switch to **Cutaway** at the same angle to see the board and LED windows. Diagonal hatching marks the section through the frame and diffuser. Its lighting comes from the closed assembly. **PCB only** shows the exposed board and **Empty shell** shows the unlit enclosure. The controls remember your choices as you switch views. The interactive viewer requires WebGL 2. [Open the model viewer](https://b1ug.github.io/blink1-models/)
 
 This repository maintains the reusable geometry, assembly code, provenance and per-file checksums used by nb1 Debugger, nb1 WebHID and nb1 Guide. Each consumer can import a pinned version and ship it offline.
 
@@ -41,6 +41,10 @@ For light falling on nearby objects, such as a tabletop, the assembled model int
 ![Front, back, rim and cutaway views of the mk2 with both LEDs off, either LED on, and both on.](docs/images/mk2-led-transport.webp)
 
 ## Diffuser wall thickness
+
+From the side, the metal rail covers the PCB. The glowing border includes the curved surfaces above, below and around the end of the rail. Halfway along the straight rail, the full silhouette is about 1.8 times the rail height in an orthographic side render and about 1.9 times in the product photo. Those are projected dimensions and depend on camera angle and the photographic edge of the glow. In the center cutaway, the hatched band exposes the plastic at the centerline. [Photograph of an illuminated mk2 viewed from the side](https://i.gzn.jp/img/2014/08/04/blink1-mk2/P2220583.jpg)
+
+![The assembled side and the center cutaway rendered at the same angle and scale. The metal rail hides the PCB in the assembly, and the hatched cut exposes both LED packages.](docs/images/mk2-assembled-and-cutaway.webp)
 
 At the LED station, 14.52 mm behind the USB end of the cover, the v3k design has roughly 3.00 mm of plastic above and below the LEDs. Each wall tapers to 1.77 mm near the rail and 1.00 mm at its outer lip. Select **Cutaway** and switch between **Center**, **Near rail** and **Outer lip** to see the sections and their top and bottom measurements. The measurements use the assembled model’s nominal millimetre scale. The teardown photograph shows the removable diffuser and its seats, while the internal dimensions come from the CAD. [ThingM diffuser STL](https://github.com/todbot/blink1/blob/101abe3599c661c4dd4d1204b4d50fb592293143/hardware/enclosure/blink1mk2_enclosure_diffuser_v3k.stl) · [GIGAZINE’s mk2 teardown photo](https://i.gzn.jp/img/2014/08/04/blink1-mk2/P2220588.jpg)
 

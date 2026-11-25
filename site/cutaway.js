@@ -75,11 +75,49 @@ function cutGeometry(THREE, geometry, planeZ, stationX) {
   return {surface, cap, wallHits: wallHits.sort((a, b) => a - b)};
 }
 
+function sectionMaterial(THREE, source, unit, slope) {
+  const material = new THREE.MeshStandardMaterial({
+    color: source.color, roughness: .88, metalness: source.metalness * .45,
+    emissive: source.emissive, emissiveIntensity: source.emissiveIntensity * .55,
+  });
+  material.onBeforeCompile = (shader, renderer) => {
+    // The plastic section samples the same local light field as its exterior.
+    source.onBeforeCompile(shader, renderer);
+    shader.uniforms.sectionHatchDirection = {value: new THREE.Vector2(1, slope)
+      .normalize().divideScalar(1.1 * unit)};
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', `#include <common>
+        uniform vec2 sectionHatchDirection;
+        varying float sectionHatch;`)
+      .replace('#include <begin_vertex>', `#include <begin_vertex>
+        sectionHatch = dot(position.xy, sectionHatchDirection);`);
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', `#include <common>
+        varying float sectionHatch;
+        float hatchIntegral(float phase) {
+          return floor(phase) * 0.16 + min(fract(phase), 0.16);
+        }`)
+      .replace('#include <opaque_fragment>', `
+        // Average the diagonal ink coverage across a pixel at oblique angles.
+        float span = max(fwidth(sectionHatch), 0.0001);
+        float coverage = (hatchIntegral(sectionHatch + 0.5 * span)
+          - hatchIntegral(sectionHatch - 0.5 * span)) / span;
+        outgoingLight *= 1.0 - 0.54 * clamp(coverage, 0.0, 1.0);
+        #include <opaque_fragment>`);
+  };
+  material.customProgramCacheKey = () => source.customProgramCacheKey() + '/hatched-section';
+  return material;
+}
+
 export function createCutaway(THREE, group) {
   const diffuser = group.getObjectByName('One continuous milky diffuser');
   const frame = group.getObjectByName('Original frame — CAD details retained');
   const unit = group.userData.unitsPerMillimetre;
   const stationX = group.getObjectByName('L1 RGB emitter').position.x;
+  const capMaterials = new Map([
+    [diffuser, sectionMaterial(THREE, diffuser.material, unit, -1)],
+    [frame, sectionMaterial(THREE, frame.material, unit, 1)],
+  ]);
   let activeOffset = null, sections = [], thickness = null;
 
   function clearSections() {
@@ -97,12 +135,10 @@ export function createCutaway(THREE, group) {
       clearSections();
       // The assembled model registers the CAD width centreline at local Z = 0.
       const planeZ = -offsetMM * unit;
-      for (const part of [diffuser, frame]) {
+      for (const [part, material] of capMaterials) {
         const original = part.geometry;
         const {surface, cap, wallHits} = cutGeometry(THREE, original, planeZ, stationX);
-        // Use the parent material and object coordinates on the cap to read the
-        // closed assembly's light field at the exposed material section.
-        const face = new THREE.Mesh(cap, part.material);
+        const face = new THREE.Mesh(cap, material);
         face.name = part.name + ' section';
         part.add(face);
         sections.push({part, original, surface, face});
@@ -119,5 +155,10 @@ export function createCutaway(THREE, group) {
     }
     return thickness;
   }
-  return {setEnabled, dispose: clearSections};
+  function dispose() {
+    clearSections();
+    for (const material of capMaterials.values()) material.dispose();
+    capMaterials.clear();
+  }
+  return {setEnabled, dispose};
 }

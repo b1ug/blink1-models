@@ -10,7 +10,11 @@
 <body><main>
   <header><div><a href="https://github.com/b1ug/blink1-models">blink(1) Models</a><h1>blink(1) mk2</h1></div>
   <a href="https://github.com/b1ug/blink1-models/releases">Download model</a></header>
-  <section class="stage" aria-label="3D viewer"><canvas id="model" tabindex="0" role="img" aria-label="Rotatable blink(1) mk2" aria-describedby="guide"></canvas><p id="status" role="status">Loading model…</p></section>
+  <section class="stage" aria-label="3D viewer">
+    <canvas id="model" tabindex="0" role="img" aria-label="Rotatable blink(1) mk2" aria-describedby="guide"></canvas>
+    <span id="section-label" hidden></span>
+    <p id="status" role="status">Loading model…</p>
+  </section>
   <div class="controls">
     <fieldset class="model-modes"><legend>Model view</legend>
       <div class="choices">
@@ -37,7 +41,13 @@
     </div>
     <output id="section-gauge" aria-live="polite"></output>
   </fieldset>
-  <footer><p id="guide">Drag to orbit. Scroll or pinch to zoom. Use arrow keys, +, − or Home.</p><button id="reset" disabled>Reset view</button></footer>
+  <footer>
+    <p id="guide">Drag to orbit. Scroll or pinch to zoom. Use arrow keys, +, − or Home.</p>
+    <div class="choices">
+      <button id="side-view" type="button" disabled>Side view</button>
+      <button id="reset" type="button" disabled>Reset view</button>
+    </div>
+  </footer>
   <section class="sources"><h2>Model files</h2><p>The v2c6 PCB carries two WS2812B RGB LEDs, one on each face. LED 1 shines toward the blink(1) wordmark and LED 2 toward ThingM. The assembled view shows their light spreading through the diffuser.</p>
   <a href="models/mk2/manifest.json">Manifest and checksums</a> · <a href="models/mk2/model-assets/source.json">Geometry and attribution</a> · <a href="models/mk2/model-assets/LICENSE.txt">CAD license</a></section>
   <noscript>The interactive viewer uses JavaScript. Model files are available from the download link above.</noscript>

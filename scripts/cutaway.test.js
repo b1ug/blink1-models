@@ -21,6 +21,8 @@ test('the three longitudinal sections follow the v3k material and wall thickness
   const parts = ['One continuous milky diffuser', 'Original frame — CAD details retained']
     .map(name => model.group.getObjectByName(name));
   const original = parts.map(p => new THREE.Mesh(p.geometry, probe));
+  const originals = parts.map(part => part.material);
+  const cutMaterials = new Set(), disposedMaterials = new Set();
   const unit = model.group.userData.unitsPerMillimetre;
   const ray = new THREE.Raycaster();
   const down = new THREE.Vector3(0, -1, 0), inward = new THREE.Vector3(0, 0, -1);
@@ -33,7 +35,20 @@ test('the three longitudinal sections follow the v3k material and wall thickness
       const cap = part.getObjectByName(part.name + ' section');
       const surface = part.geometry;
       assert.ok(cap.visible && surface !== original[i].geometry);
-      assert.equal(cap.material, part.material);
+      assert.equal(part.material, originals[i]);
+      assert.notEqual(cap.material, part.material);
+      assert.ok(cap.material.roughness > part.material.roughness);
+      if (!cutMaterials.has(cap.material)) {
+        cutMaterials.add(cap.material);
+        cap.material.addEventListener('dispose', () => disposedMaterials.add(cap.material));
+        const shader = {...THREE.ShaderLib.standard, uniforms: {}};
+        cap.material.onBeforeCompile(shader);
+        assert.match(shader.fragmentShader, /fwidth\(sectionHatch\)/);
+        if (i === 0) {
+          const light = part.material.userData.lightField.uniforms;
+          for (const key of Object.keys(light)) assert.equal(shader.uniforms[key], light[key]);
+        }
+      }
       // All indexed, visible vertices must lie in the half-space behind the
       // selected plane. Every cap triangle lies on the actual section.
       const vertices = surface.getAttribute('position'), index = surface.getIndex();
@@ -65,4 +80,8 @@ test('the three longitudinal sections follow the v3k material and wall thickness
     assert.equal(part.geometry, original[i].geometry);
     assert.equal(part.getObjectByName(part.name + ' section').visible, false);
   }
+  assert.equal(cutMaterials.size, 2);
+  assert.equal(disposedMaterials.size, 0);
+  cut.dispose();
+  assert.deepEqual(disposedMaterials, cutMaterials);
 });

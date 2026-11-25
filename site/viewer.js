@@ -7,10 +7,12 @@ import {createCutaway} from './cutaway.js';
 const canvas = document.querySelector('#model');
 const status = document.querySelector('#status');
 const reset = document.querySelector('#reset');
+const sideView = document.querySelector('#side-view');
 const variantButtons = [...document.querySelectorAll('[data-variant]')];
 const cutControls = document.querySelector('#cut-controls');
 const cutButtons = [...cutControls.querySelectorAll('[data-offset]')];
 const gauge = document.querySelector('#section-gauge');
+const sectionLabel = document.querySelector('#section-label');
 const ledControls = document.querySelector('#led-controls');
 const leds = [...ledControls.querySelectorAll('.led')].map(row => ({
   power: row.querySelector('[type="checkbox"]'),
@@ -73,7 +75,9 @@ async function start() {
     const thickness = cutaway.setEnabled(true, offsetMM);
     gauge.textContent = `${offsetMM} mm from center. At the LED station the top wall is ${thickness.top.toFixed(2)} mm and the bottom wall is ${thickness.bottom.toFixed(2)} mm.`;
     for (const button of cutButtons) {
-      button.setAttribute('aria-pressed', String(Number(button.dataset.offset) === offsetMM));
+      const selected = Number(button.dataset.offset) === offsetMM;
+      button.setAttribute('aria-pressed', String(selected));
+      if (selected) sectionLabel.textContent = `Cutaway · ${button.textContent}`;
     }
   }
   function showVariant(view) {
@@ -99,6 +103,7 @@ async function start() {
       orbit.saveState();
     }
     cutControls.hidden = view !== 'cutaway';
+    sectionLabel.hidden = view !== 'cutaway';
     if (view === 'cutaway') {
       cutaway ??= createCutaway(THREE, model.group);
       showSection();
@@ -149,6 +154,12 @@ async function start() {
 
   orbit.addEventListener('change', render);
   reset.addEventListener('click', () => orbit.reset());
+  sideView.addEventListener('click', () => {
+    const distance = camera.position.distanceTo(orbit.target);
+    const direction = model.group.getWorldDirection(new THREE.Vector3());
+    camera.position.copy(orbit.target).addScaledVector(direction, distance);
+    orbit.update();
+  });
   ledControls.addEventListener('input', () => {
     updateLeds();
     render();
@@ -169,10 +180,12 @@ async function start() {
   reset.disabled = false;
   status.hidden = true;
   canvas.addEventListener('webglcontextlost', () => {
+    sideView.disabled = true;
     status.hidden = false;
     status.textContent = 'Graphics paused. Reload to restore the view.';
   });
   showVariant('assembled');
+  sideView.disabled = false;
   window.addEventListener('pagehide', event => {
     if (event.persisted) return;
     observer.disconnect();
