@@ -250,6 +250,18 @@
     {
       "url": "https://cdn-shop.adafruit.com/datasheets/WS2812B.pdf",
       "note": "Worldsemi’s WS2812B datasheet, hosted by Adafruit. Pages 1–2 describe an integrated RGB LED and control IC with 256 levels per primary color and illustrate a 5 × 5 mm four-pin package with a round window. The pin drawing also shows the divided electrodes inside the window."
+    },
+    {
+      "url": "https://gigazine.net/news/20140804-blink1-mk2/",
+      "note": "In this hands-on review the authors separated the supplied mk2 into its diffuser, metal frame and USB/PCB assembly and photographed it illuminated."
+    },
+    {
+      "url": "https://i.gzn.jp/img/2014/08/04/blink1-mk2/P2220583.jpg",
+      "note": "A nearly side-on view shows the two colours meeting gradually at the curved end and the metal side rail between the lit faces."
+    },
+    {
+      "url": "https://i.gzn.jp/img/2014/08/04/blink1-mk2/P2220588.jpg",
+      "note": "Disassembly exposes the outside of the removable cover and the narrow rail seats. There is no scale or section through the centre of the moulding."
     }
   ],
   "led_numbering": {
@@ -368,8 +380,40 @@
       "target_cell_spacing_mm": 0.45,
       "window_samples_per_led": 4096,
       "equation_reference": "https://graphics.stanford.edu/~srm/publications/SG01-subsurf-abstract.html",
-      "note": "The diffusion equation is solved on the fitted mesh volume. Parameters describe this visualization of the milky diffuser."
+      "note": "The diffusion equation is solved on the fitted mesh volume. Parameters describe this visualization of the milky diffuser.",
+      "assumed_refractive_index": 1.44,
+      "air_boundary_samples_per_face": 48
     },
-    "drive_reference": "https://github.com/todbot/blink1/blob/101abe3599c661c4dd4d1204b4d50fb592293143/hardware/firmware_mk2/ws2811.h"
+    "drive_reference": "https://github.com/todbot/blink1/blob/101abe3599c661c4dd4d1204b4d50fb592293143/hardware/firmware_mk2/ws2811.h",
+    "cavity_exchange": "Plastic faces exchange light across air gaps using cosine-weighted visibility rays. Metal and PCB terminate rays. On first entry and on re-entry, unpolarized Fresnel transmission weights the light entering the receiving plastic at the incident angle. Reflected air-side rays are counted as a loss. Returned energy is apportioned from flux already leaving its sending face.",
+    "cavity_exchange_reference": "https://www.pbr-book.org/4ed/Light_Transport_I_Surface_Reflection/The_Light_Transport_Equation",
+    "validation": {
+      "comparison_commit": "7859f2f5b8f68be11d869b716025708bd5e51dde",
+      "metric": "Vertical extent on the rearmost plastic surface along the width centreline, sampled every 0.015 nominal mm. At equal normalized source drive, each LED must contribute at least 25% of the summed linear field before tone mapping.",
+      "previous_extent_mm": 4.59,
+      "with_cavity_exchange_mm": 5.61
+    }
+  },
+  "diffuser_wall_section": {
+    "source": "blink1mk2_enclosure_diffuser_v3k.stl",
+    "measurement": "Through both LED packages, 14.52 nominal mm from the diffuser’s USB end. Top and bottom thicknesses are measured parallel to the board normal at the same longitudinal station.",
+    "sections": [
+      {
+        "offset_from_width_centre_mm": 0,
+        "top_mm": 2.992,
+        "bottom_mm": 2.996
+      },
+      {
+        "offset_from_width_centre_mm": 7.25,
+        "top_mm": 1.77,
+        "bottom_mm": 1.772
+      },
+      {
+        "offset_from_width_centre_mm": 8.42,
+        "top_mm": 0.999,
+        "bottom_mm": 0.999
+      }
+    ],
+    "scope": "The board and plug provide the nominal millimetre scale for the unitless STL. The published mesh is thicker through the middle and tapers to the metal seats. These are design dimensions. The photographs establish the outer profile and assembly."
   }
 }

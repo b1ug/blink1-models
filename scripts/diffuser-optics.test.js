@@ -70,3 +70,34 @@ test('a shutter, window position and emission direction control the two volume r
   assert.equal(clipped[0].sum, 0);
   assert.ok(clipped[1].sum > 0);
 });
+
+test('diffuse light crosses a visible air gap, and an opaque partition stops that path', t => {
+  // The source shines upwards into the larger, lower panel. Every straight
+  // path from the window to the upper panel passes through the lower one.
+  const floor = new THREE.BoxGeometry(10, 1.8, 10).toNonIndexed().translate(0, -2.5, 0);
+  const ceiling = new THREE.BoxGeometry(8, 1.8, 8).toNonIndexed().translate(0, 2.5, 0);
+  const shell = new THREE.BufferGeometry();
+  const vertices = [...floor.getAttribute('position').array, ...ceiling.getAttribute('position').array];
+  shell.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+  const partition = new THREE.BoxGeometry(12, 1.2, 12);
+  const led = {position: new THREE.Vector3(0, -4.5, 0), normal: new THREE.Vector3(0, 1, 0), radius: .8};
+  const dark = {...led, normal: led.normal.clone().negate()};
+  t.after(() => { for (const g of [floor, ceiling, shell, partition]) g.dispose(); });
+  function responseAt(transfer, point) {
+    const {texture, origin, extent} = transfer;
+    const {width, height, depth, data} = texture.image;
+    const cell = point.clone().sub(origin).divide(extent).multiply(new THREE.Vector3(width, height, depth)).floor();
+    const index = 2 * (cell.x + width * (cell.y + height * cell.z));
+    return [0, 1].map(channel => THREE.DataUtils.fromHalfFloat(data[index + channel]));
+  }
+  const covered = createDiffuserTransfer(THREE, shell, partition, null, [led, dark], 1);
+  partition.translate(20, 0, 0);
+  const open = createDiffuserTransfer(THREE, shell, partition, null, [led, dark], 1);
+  t.after(() => { covered.texture.dispose(); open.texture.dispose(); });
+  const far = new THREE.Vector3(0, 2.5, 0), near = new THREE.Vector3(0, -2.5, 0);
+  const [transmitted, otherLED] = responseAt(open, far);
+  assert.ok(transmitted > 0 && transmitted < responseAt(open, near)[0]);
+  assert.equal(otherLED, 0);
+  assert.deepEqual(responseAt(covered, far), [0, 0]);
+  assert.ok(responseAt(covered, near)[0] > 0);
+});

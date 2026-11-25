@@ -13,7 +13,7 @@
  */
 import {fitFrameToDiffuser, levelEnclosureRails} from './enclosure-fit.js';
 import {createBlink1PCB, getBlink1LEDSources} from './pcb-model.js';
-import {createDiffuserTransfer, fullDriveIntensity} from './diffuser-optics.js';
+import {createDiffuserTransfer, diffuserIOR, fullDriveIntensity} from './diffuser-optics.js';
 import pcbLayout from './model-assets/pcb-layout.json' with {type: 'json'};
 
 export function createBlink1Model(THREE, {
@@ -288,7 +288,7 @@ export function createBlink1Model(THREE, {
     color: 0xf8faf7,
     metalness: 0, roughness: .47, roughnessMap: frostRoughness, envMapIntensity: .32,
     normalMap: frostNormal, normalScale: new THREE.Vector2(.11, .11),
-    transmission: .12, thickness: .13, ior: 1.44,
+    transmission: .12, thickness: .13, ior: diffuserIOR,
     attenuationColor: new THREE.Color(0xf5faf7), attenuationDistance: 1.6,
     clearcoat: .035, clearcoatRoughness: .42, specularIntensity: .75,
     emissive: new THREE.Color(0xffffff),
@@ -432,6 +432,7 @@ export function createBlink1Model(THREE, {
   group.userData.pcbRevision = pcbModel ? 'v2c6' : null;
   group.userData.faceMappingSource = 'Project MK2 wordmark mapping; manufacturer references supply top/bottom numbering. See model-assets/source.json.';
   group.userData.bodySize = { x: shellSize.x, y: shellSize.y, z: shellSize.z };
+  group.userData.unitsPerMillimetre = unit;
   group.userData.upAxis = 'y';
 
   function canonical(value) {

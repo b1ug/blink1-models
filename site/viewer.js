@@ -8,6 +8,9 @@ const canvas = document.querySelector('#model');
 const status = document.querySelector('#status');
 const reset = document.querySelector('#reset');
 const variantButtons = [...document.querySelectorAll('[data-variant]')];
+const cutControls = document.querySelector('#cut-controls');
+const cutButtons = [...cutControls.querySelectorAll('[data-offset]')];
+const gauge = document.querySelector('#section-gauge');
 const ledControls = document.querySelector('#led-controls');
 const leds = [...ledControls.querySelectorAll('.led')].map(row => ({
   power: row.querySelector('[type="checkbox"]'),
@@ -60,10 +63,18 @@ async function start() {
     loader.loadAsync(new URL('./models/mk2/model-assets/blink1mk2_enclosure_' + part + '_v3k.stl', import.meta.url).href)
   ));
   let model = null, cutaway = null, viewRadius = 1, currentView = null;
+  let offsetMM = 0;
   function render() { renderer.render(scene, camera); }
   function updateLeds() {
     const [one, two] = leds.map(led => led.power.checked ? led.color.value : null);
     model.setColors(one, two, ledControls.disabled ? 'none' : 'preview');
+  }
+  function showSection() {
+    const thickness = cutaway.setEnabled(true, offsetMM);
+    gauge.textContent = `${offsetMM} mm from center. At the LED station the top wall is ${thickness.top.toFixed(2)} mm and the bottom wall is ${thickness.bottom.toFixed(2)} mm.`;
+    for (const button of cutButtons) {
+      button.setAttribute('aria-pressed', String(Number(button.dataset.offset) === offsetMM));
+    }
   }
   function showVariant(view) {
     if (currentView === view) return;
@@ -87,8 +98,13 @@ async function start() {
       orbit.update();
       orbit.saveState();
     }
-    if (view === 'cutaway' && !cutaway) cutaway = createCutaway(THREE, model.group);
-    cutaway?.setEnabled(view === 'cutaway');
+    cutControls.hidden = view !== 'cutaway';
+    if (view === 'cutaway') {
+      cutaway ??= createCutaway(THREE, model.group);
+      showSection();
+    } else {
+      cutaway?.setEnabled(false);
+    }
     currentView = view;
     for (const button of variantButtons) {
       button.setAttribute('aria-pressed', String(button.dataset.variant === view));
@@ -137,6 +153,13 @@ async function start() {
     updateLeds();
     render();
   });
+  for (const button of cutButtons) {
+    button.addEventListener('click', () => {
+      offsetMM = Number(button.dataset.offset);
+      showSection();
+      render();
+    });
+  }
   for (const button of variantButtons) {
     button.addEventListener('click', () => showVariant(button.dataset.variant));
     button.disabled = false;

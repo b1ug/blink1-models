@@ -1,13 +1,13 @@
 // Cut the fitted display mesh in its own coordinates. The cut surface and its
 // cap then share the model transform, intersection points and MSAA coverage.
-function cutGeometry(THREE, geometry) {
+function cutGeometry(THREE, geometry, planeZ, stationX) {
   const position = geometry.getAttribute('position');
   const index = geometry.getIndex();
   const count = index ? index.count : position.count;
   const attributes = Object.entries(geometry.attributes).map(([name, source]) => ({
     name, source, values: Array.from(source.array),
   }));
-  const surfaceIndices = [], nodes = new Map();
+  const surfaceIndices = [], nodes = new Map(), wallHits = [];
   function endpoint(x, y) {
     // STL triangles repeat their shared vertices. Join duplicates at float32
     // precision, retaining the unrounded point for the actual section edge.
@@ -22,7 +22,7 @@ function cutGeometry(THREE, geometry) {
       const a = index ? index.getX(face + edge) : face + edge;
       const next = face + (edge + 1) % 3;
       const b = index ? index.getX(next) : next;
-      const za = position.getZ(a), zb = position.getZ(b);
+      const za = position.getZ(a) - planeZ, zb = position.getZ(b) - planeZ;
       if (za < 0) polygon.push(a);
       if ((za < 0) === (zb < 0)) continue;
       const t = za / (za - zb);
@@ -41,6 +41,11 @@ function cutGeometry(THREE, geometry) {
     if (crossings.length === 2) {
       const [a, b] = crossings;
       if (a !== b) { a.joined.add(b); b.joined.add(a); }
+      // Intersect this section edge with a vertical line at the LED's
+      // longitudinal station. A half-open interval counts shared tips once.
+      if ((a.x <= stationX) !== (b.x <= stationX)) {
+        wallHits.push(THREE.MathUtils.lerp(a.y, b.y, (stationX - a.x) / (b.x - a.x)));
+      }
     }
   }
   const surface = new THREE.BufferGeometry();
@@ -65,35 +70,54 @@ function cutGeometry(THREE, geometry) {
       cursor = next;
     } while (cursor !== start);
   }
-  return {surface, cap: new THREE.ShapeGeometry(paths.toShapes())};
+  const cap = new THREE.ShapeGeometry(paths.toShapes());
+  cap.translate(0, 0, planeZ);
+  return {surface, cap, wallHits: wallHits.sort((a, b) => a - b)};
 }
 
 export function createCutaway(THREE, group) {
-  const parts = ['Original frame — CAD details retained', 'One continuous milky diffuser'].map(name => {
-    const part = group.getObjectByName(name);
-    const original = part.geometry;
-    const {surface, cap} = cutGeometry(THREE, original);
-    // The cut face uses the same material and model-local light field as the
-    // outer face. Both respond to color changes without recomputing transport.
-    const face = new THREE.Mesh(cap, part.material);
-    face.name = name + ' section';
-    face.visible = false;
-    part.add(face);
-    return {part, original, surface, face};
-  });
-  function setEnabled(enabled) {
-    for (const {part, original, surface, face} of parts) {
-      part.geometry = enabled ? surface : original;
-      face.visible = enabled;
-    }
-  }
-  function dispose() {
-    for (const {part, original, surface, face} of parts) {
+  const diffuser = group.getObjectByName('One continuous milky diffuser');
+  const frame = group.getObjectByName('Original frame — CAD details retained');
+  const unit = group.userData.unitsPerMillimetre;
+  const stationX = group.getObjectByName('L1 RGB emitter').position.x;
+  let activeOffset = null, sections = [], thickness = null;
+
+  function clearSections() {
+    for (const {part, original, surface, face} of sections) {
       part.geometry = original;
       face.removeFromParent();
       face.geometry.dispose();
       surface.dispose();
     }
+    sections = [];
+    activeOffset = null;
   }
-  return {setEnabled, dispose};
+  function setEnabled(enabled, offsetMM = 0) {
+    if (enabled && activeOffset !== offsetMM) {
+      clearSections();
+      // The assembled model registers the CAD width centreline at local Z = 0.
+      const planeZ = -offsetMM * unit;
+      for (const part of [diffuser, frame]) {
+        const original = part.geometry;
+        const {surface, cap, wallHits} = cutGeometry(THREE, original, planeZ, stationX);
+        // Use the parent material and object coordinates on the cap to read the
+        // closed assembly's light field at the exposed material section.
+        const face = new THREE.Mesh(cap, part.material);
+        face.name = part.name + ' section';
+        part.add(face);
+        sections.push({part, original, surface, face});
+        if (part === diffuser) {
+          const [bottom, lowerSeat, upperSeat, top] = wallHits;
+          thickness = {top: (top - upperSeat) / unit, bottom: (lowerSeat - bottom) / unit};
+        }
+      }
+      activeOffset = offsetMM;
+    }
+    for (const {part, original, surface, face} of sections) {
+      part.geometry = enabled ? surface : original;
+      face.visible = enabled;
+    }
+    return thickness;
+  }
+  return {setEnabled, dispose: clearSections};
 }

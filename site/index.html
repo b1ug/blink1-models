@@ -29,6 +29,14 @@
       </div>
     </fieldset>
   </div>
+  <fieldset id="cut-controls" hidden><legend>Longitudinal cut position</legend>
+    <div class="choices">
+      <button type="button" data-offset="0" aria-pressed="true">Center</button>
+      <button type="button" data-offset="7.25" aria-pressed="false">Near rail</button>
+      <button type="button" data-offset="8.42" aria-pressed="false">Outer lip</button>
+    </div>
+    <output id="section-gauge" aria-live="polite"></output>
+  </fieldset>
   <footer><p id="guide">Drag to orbit. Scroll or pinch to zoom. Use arrow keys, +, − or Home.</p><button id="reset" disabled>Reset view</button></footer>
   <section class="sources"><h2>Model files</h2><p>The v2c6 PCB carries two WS2812B RGB LEDs, one on each face. LED 1 shines toward the blink(1) wordmark and LED 2 toward ThingM. The assembled view shows their light spreading through the diffuser.</p>
   <a href="models/mk2/manifest.json">Manifest and checksums</a> · <a href="models/mk2/model-assets/source.json">Geometry and attribution</a> · <a href="models/mk2/model-assets/LICENSE.txt">CAD license</a></section>
