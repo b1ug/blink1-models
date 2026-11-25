@@ -17,7 +17,7 @@ jobs:
         with:
           node-version: '22'
       - run: npm ci --prefix site --ignore-scripts
-      - run: node --test scripts/stage.test.js
+      - run: node --test scripts/*.test.js
       - run: node --check site/viewer.js && python3 scripts/check.py --bundle --site
       - if: github.ref == 'refs/heads/main'
         uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b

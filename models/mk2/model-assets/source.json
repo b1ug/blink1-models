@@ -8,7 +8,7 @@
   "license_file": "LICENSE.txt",
   "license_url": "https://github.com/todbot/blink1/blob/101abe3599c661c4dd4d1204b4d50fb592293143/LICENSE.txt",
   "license_note": "The exact LICENSE.txt at this commit states CC BY-SA 4.0; README.md still says 3.0. Preserve this discrepancy rather than silently substituting one. blink(1) is a ThingM trademark.",
-  "modifications": "Original enclosure STL and its LICENSE bytes are unchanged. The display assembly retains the fitted frame and USB reconstruction, and adds a visual PCB from the official MK2 v2c6 EAGLE layout. The model API exposes shell, PCB-only and assembled variants; the preview page offers empty shell and PCB-only modes. Board thickness and package heights are visual estimates.",
+  "modifications": "The assembly adjusts the diffuser to the level side rails of ThingM’s v3k metal frame and fits the parts locally at their joint. It adds a visual USB connector and a PCB based on the official MK2 v2c6 EAGLE layout. The board thickness follows the nominal two-layer design stack. Package heights are visual estimates. The API exposes shell, PCB-only and assembled variants. The preview page offers empty shell and PCB-only modes. The bundled STL files retain their original bytes.",
   "assets": [
     {
       "file": "blink1mk2_enclosure_diffuser_v3k.stl",
@@ -106,7 +106,7 @@
       "license": "CC-BY-SA-3.0",
       "format": "derived EAGLE placement, outline and silkscreen data",
       "geometry_units": "mm, as recorded by EAGLE",
-      "modifications": "Converted to the local Y-up Three.js assembly. PCB thickness, component housings and materials are visual approximations."
+      "modifications": "Converted the EAGLE layout and nominal two-layer board thickness to the local Y-up Three.js assembly. Component housings and materials are visual approximations."
     },
     {
       "file": "PCB-LICENSE.txt",
@@ -117,7 +117,7 @@
     }
   ],
   "alignment": {
-    "status": "Derived display assembly: common front-opening datum, metal seating fit and front/side material ownership. Raw CAD and the plastic engraving are unchanged.",
+    "status": "The display model uses the front opening for length alignment and the straight metal side rails for height alignment.",
     "common_axes": "Frame convention: x width, y body length, z thickness. Model agent may apply one further rigid transform to the whole assembled object for Three.js Y-up.",
     "frame_transform": {
       "rotation_degrees_xyz": [
@@ -177,14 +177,15 @@
         17.000005,
         22.665361522,
         11.098827799999999
-      ]
+      ],
+      "stage": "After rigid alignment, before fitting the diffuser to the rail heights."
     },
     "shared_bbox_center": [
       8.5,
       9.996185,
       3
     ],
-    "basis": "The two exports have different axes and unequal lengths. Width and thickness centers are aligned; the front min-Y datum is shared. Only the derived metal frame is then fitted to the original plastic inner seating faces. Plastic/engraving vertices and raw files are preserved. Internal overlap is recorded in seating-fit.json.",
+    "basis": "The exports use different axes and have unequal lengths. The assembly aligns their width and thickness centers and their front min-Y planes. On the original frame at X=0, the straight side extends from about Y=2.715 to Y=16.992 with its edges at Z=0 and Z=6. These planes define the diffuser seats along both rails. The renderer seats the front and rear joints, then levels the joined frame and diffuser together. The adjustment retains the transverse curvature, engraved faces and rounded tail. See seating-fit.json for contact measurements.",
     "topology_check": {
       "method": "Triangles joined by vertex coordinates rounded to 4 decimal places.",
       "diffuser_connected_components": 1,
@@ -213,6 +214,34 @@
     {
       "url": "https://blink1.thingm.com/blink1-variations/",
       "note": "Official variation page confirms dual RGB LEDs and metal + plastic design for mk2."
+    },
+    {
+      "url": "https://github.com/todbot/blink1/blob/101abe3599c661c4dd4d1204b4d50fb592293143/docs/imgs/blink1mk2-twocolor-long.jpg",
+      "note": "ThingM’s illuminated mk2 side photo shows straight upper and lower edges along the metal rail, a rounded tip and a diffuser that wraps around the back."
+    },
+    {
+      "source": "User-supplied mk2 joint photograph",
+      "note": "The USB-end view shows the straight metal side between the upper and lower plastic faces and the rounded front shoulders beside the plug."
+    },
+    {
+      "url": "https://github.com/todbot/blink1/blob/101abe3599c661c4dd4d1204b4d50fb592293143/hardware/firmware_mk2/blink1mk2-reprogram-diag.jpg",
+      "note": "ThingM’s exposed-board photo shows the two metal side rails flanking the PCB behind the USB plug."
+    },
+    {
+      "url": "https://blink1.thingm.com/wp-content/uploads/2019/03/blink1mk2-amazon-1024x829.png",
+      "note": "The mk2 product photograph shows paired retention holes on the exposed USB plug and the molded diffuser wrapping the back of the metal rails."
+    },
+    {
+      "url": "https://www.molex.com/en-us/products/part-detail/0480371000",
+      "note": "X1 in the v2c6 board is the Molex 48037-1000. The manufacturer identifies a right-angle Type-A plug, with a recommended PCB thickness of 1.20 to 1.60 mm."
+    },
+    {
+      "url": "https://www.usb.org/sites/default/files/CCWG_A_Plug_Form_Factor_Guideline_Revision_1.0_.pdf#page=4",
+      "note": "Appendix A, figure 6-9 provides the mating-face and contact dimensions used for the visual plug."
+    },
+    {
+      "url": "https://thingm.com/blog/2017/12/using-the-blink1-mk2-led-strip-adapter",
+      "note": "The manufacturer shows a bare mk2 PCB and its connector during adapter assembly. The v2c6 board file supplies the coordinates used here."
     }
   ],
   "led_numbering": {
@@ -254,13 +283,13 @@
     }
   },
   "visual_polish": {
-    "date": "2026-11-15",
-    "source_geometry": "Raw official STL files retain their recorded hashes. The derived metal frame has fitted seats, local conforming USB-corner subdivision and minimal exterior clearances. Plastic and engraving are preserved; crease-preserving normals are rebuilt.",
-    "supplemental_geometry": "Visual USB shell has thin bevelled sheets, openings, dark tongue and recessed contacts.",
-    "materials": "Matte metal and frosted plastic; continuous side-frame UVs; no anisotropy or negative metal depth bias. Both fixed sources feed one continuous diffuser light field.",
-    "presentation": "30 degree perspective, restrained object tilt, broad low-contrast studio light and soft contact shadow; explicit bounded zoom.",
+    "date": "2026-11-26",
+    "source_geometry": "The assembly uses the original engraved diffuser and metal frame meshes, with the rail alignment and joint fit described in alignment. At the USB shoulders, the renderer shades the outer walls of the metal and diffuser along the v3k corner radii. The shading follows the diffuser bevel and keeps the edges of the USB opening sharp.",
+    "supplemental_geometry": "The visual USB plug uses a radiused folded shield with retention holes on both broad faces, a black insulating tongue and four staggered contacts. Its 11 mm exposed length is a display estimate. The 17.5 mm lip-to-X1 distance comes from the v2c6 EAGLE package outline. Rear solder tails meet the four X1 pads.",
+    "materials": "The frame has a uniform satin metal finish. The USB plug uses its own fine directional grain. Both fixed light sources illuminate the frosted diffuser.",
+    "presentation": "The catalog uses an orthographic orbit camera, bounded zoom, broad reflection cards and directional studio lighting.",
     "scope": "Illustration for design review; not engineering fit or optical calibration.",
-    "emission": "Continuous model-local two-source scattering with additive linear RGB before tone mapping; the frosted surface tint is separate from emitted radiance. No binary face atlas or camera-dependent color split. Canonical channel RGB remains unchanged."
+    "emission": "The diffuser light field and both spill lights are centered over the opposed v2c6 LED packages. The two sources add in linear RGB before tone mapping."
   },
   "usb_orientation": {
     "source": "User physical observation in this design session",
@@ -293,13 +322,13 @@
     "verification": "Production GLSL software checks cover additive radiance, source dominance, cross-face transmission, continuity, black clearing and pose-invariant identity; they do not certify physical optics."
   },
   "seating_fit": {
-    "date": "2026-11-15",
+    "date": "2026-11-26",
     "record": "seating-fit.json",
     "implementation": "enclosure-fit.js",
-    "scope": "Derived display geometry with hidden mounting overlap; not engineering fit certification.",
-    "version": "derived-frame-seating-fit/v2",
-    "cause": "Coincident side planes plus metal depth bias; front roundover projected at stale pre-fit Z, exposing hidden metal triangle edges.",
-    "correction": "Physical side clearance, no metal depth bias, local shared-edge subdivision and final-Z front-surface seating."
+    "scope": "Display assembly in source CAD units. The frame extends slightly into the diffuser at the joint.",
+    "cause": "The original diffuser seats diverge toward the rear. Fitting the long metal sides to those seats made the metal appear to grow taller behind the USB plug.",
+    "correction": "Seat the frame against the diffuser at the front shoulders and rear tips, then level both parts together using the original metal planes as the height datum.",
+    "previous_fit": "The 2026-11-15 frame fit addressed overlapping side surfaces and exposed USB-corner edges using side clearance, local shared-edge subdivision and front projection at the fitted height."
   },
   "public_metadata_note": "Published metadata retains manufacturer URLs, CAD attribution, model changes and LED mapping. Private project-note excerpts, local source paths, device identifiers and receipt paths are omitted; original handoff is retained privately.",
   "pcb_layout": {
@@ -321,12 +350,13 @@
       "L2": "bottom side / -Y / ThingM"
     },
     "visual_approximations": [
-      "0.8 mm board thickness",
       "component body heights",
       "solder and component surface finishes"
     ],
     "revision_note": "The user-provided v2c3 PDF is an earlier schematic. v2c5/v2c6 board files use WS2812B LED packages; the v2c6 board in the main hardware/schematic directory is the model reference. The separate dev/v2d layout is not used.",
-    "appearance_reference": "User-supplied low-resolution photos show the white PCB, USB-A shell, central QFN and components on both faces. They guide appearance only; EAGLE data supplies board coordinates and dimensions."
+    "appearance_reference": "The public mk2 programming photo shows the white solder mask, a circular LED window and three plated programming holes. The v2c6 board file supplies the outline, hole and pad geometry and component placement. The photo does not identify its board revision.",
+    "nominal_thickness_mm": 1.5723,
+    "stackup_basis": "v2c6 EAGLE layerSetup (1*16), 1.5011 mm dielectric and 0.0356 mm copper per side. The production board was not measured."
   },
   "visual_variants": {
     "shell": "Existing enclosure and supplemental USB connector, without a populated PCB.",

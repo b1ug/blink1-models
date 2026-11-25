@@ -1,6 +1,7 @@
 {
-  "recorded_at": "2026-11-15T01:14:13.736Z",
+  "recorded_at": "2026-11-26",
   "purpose": "Derived display assembly; hidden mounting overlap is retained. Not a manufacturing file.",
+  "fit_stage": "The fit values below describe the frame joint before leveling. The display assembly applies the same longitudinal height correction to both fitted parts.",
   "fit": {
     "kind": "derived-frame-seating-fit/v2",
     "units": "source CAD units, interpreted as mm; not engineering-certified",
@@ -63,27 +64,45 @@
       "connector opening width"
     ]
   },
+  "diffuserProfile": {
+    "sampleX": 16.97,
+    "frontY": 4.9980926513671875,
+    "rearY": 12.995040893554688,
+    "lowerSlope": -0.025596716282303665,
+    "upperSlope": 0.026775090340300924,
+    "lowerSeatZ": 0,
+    "upperSeatZ": 6
+  },
   "independent_check": {
-    "script": "scripts/enclosure-fit.test.mjs",
-    "method": "Three.Raycaster against actual returned triangles, independent from the fitter lookup",
-    "source_inputs_unchanged": true,
-    "seating_checks": 1848,
-    "side_material_order_checks": 254,
-    "front_material_order_checks": 1588,
-    "usb_aperture_sections": 9,
-    "measured_minimum_side_clearance": 0.019997,
-    "measured_minimum_front_clearance": 0.054996,
-    "maximum_sampled_seating_air_gap": 0,
-    "scope": "Sampled contact and exterior material ownership, not a whole-surface or manufacturing guarantee. Hidden internal mounting overlap is intentional."
+    "script": "scripts/enclosure-profile.test.js",
+    "method": "Raycast the final assembled meshes on both sides. Compare the upper and lower seats and outer skins along the straight run, verify which material is visible, and check the USB shoulders and rear return.",
+    "straight_sections_per_side": 5,
+    "nominal_exposed_rail_height": 6,
+    "sample_units": "original CAD units",
+    "additional_joint_checks": {
+      "method": "Dense ray sampling of the fitted and leveled frame and diffuser",
+      "long_side_and_rear_seats": 1848,
+      "front_corner_seats": 20,
+      "usb_aperture_sections": 9,
+      "usb_aperture_width": 12.38,
+      "side_material_order_checks": 198,
+      "front_material_order_checks": 1553,
+      "minimum_sampled_side_clearance": 0.019999,
+      "minimum_sampled_front_clearance": 0.055232,
+      "maximum_sampled_seating_air_gap": 0
+    }
   },
   "visual_check": {
-    "captures": "../screenshots/joint-capture.json",
-    "poses": 6,
-    "light_states": [
-      "lit",
-      "unlit"
+    "pose": "Orthographic side view with USB axis horizontal",
+    "straight_side_samples": 11,
+    "previous_height_px": [
+      142,
+      166
     ],
-    "reference": "../screenshots/physical-joint-reference.png",
-    "scope": "Actual software WebGL workbench screenshots, same before/after camera poses. No Jobs or device reports."
+    "leveled_height_px": [
+      162,
+      162
+    ],
+    "scope": "Same scale and camera for both captures. Pixel heights refer to the visible metal between the two diffuser faces."
   }
 }
