@@ -113,12 +113,13 @@ export function createCutaway(THREE, group) {
   const diffuser = group.getObjectByName('One continuous milky diffuser');
   const frame = group.getObjectByName('Original frame — CAD details retained');
   const unit = group.userData.unitsPerMillimetre;
+  const diffuserBounds = new THREE.Box3().setFromBufferAttribute(diffuser.geometry.getAttribute('position'));
   const stationX = group.getObjectByName('L1 RGB emitter').position.x;
   const capMaterials = new Map([
     [diffuser, sectionMaterial(THREE, diffuser.material, unit, -1)],
     [frame, sectionMaterial(THREE, frame.material, unit, 1)],
   ]);
-  let activeOffset = null, sections = [], thickness = null;
+  let activeOffset = null, sections = [], measurements = null;
 
   function clearSections() {
     for (const {part, original, surface, face} of sections) {
@@ -133,8 +134,9 @@ export function createCutaway(THREE, group) {
   function setEnabled(enabled, offsetMM = 0) {
     if (enabled && activeOffset !== offsetMM) {
       clearSections();
-      // The assembled model registers the CAD width centreline at local Z = 0.
-      const planeZ = -offsetMM * unit;
+      // The cut opens toward +Z. Moving it from the center to the near lip
+      // leaves more of the housing behind the plane (z < planeZ).
+      const planeZ = offsetMM * unit;
       for (const [part, material] of capMaterials) {
         const original = part.geometry;
         const {surface, cap, wallHits} = cutGeometry(THREE, original, planeZ, stationX);
@@ -144,7 +146,10 @@ export function createCutaway(THREE, group) {
         sections.push({part, original, surface, face});
         if (part === diffuser) {
           const [bottom, lowerSeat, upperSeat, top] = wallHits;
-          thickness = {top: (top - upperSeat) / unit, bottom: (lowerSeat - bottom) / unit};
+          measurements = {
+            top: (top - upperSeat) / unit, bottom: (lowerSeat - bottom) / unit,
+            retainedWidth: (planeZ - diffuserBounds.min.z) / unit,
+          };
         }
       }
       activeOffset = offsetMM;
@@ -153,7 +158,7 @@ export function createCutaway(THREE, group) {
       part.geometry = enabled ? surface : original;
       face.visible = enabled;
     }
-    return thickness;
+    return measurements;
   }
   function dispose() {
     clearSections();

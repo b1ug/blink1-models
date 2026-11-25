@@ -72,8 +72,9 @@ async function start() {
     model.setColors(one, two, ledControls.disabled ? 'none' : 'preview');
   }
   function showSection() {
-    const thickness = cutaway.setEnabled(true, offsetMM);
-    gauge.textContent = `${offsetMM} mm from center. At the LED station the top wall is ${thickness.top.toFixed(2)} mm and the bottom wall is ${thickness.bottom.toFixed(2)} mm.`;
+    const section = cutaway.setEnabled(true, offsetMM);
+    gauge.textContent = `Cut ${offsetMM} mm from center, leaving ${section.retainedWidth.toFixed(2)} mm of enclosure width. `
+      + `At the LED station the plastic walls measure ${section.top.toFixed(2)} mm (top) and ${section.bottom.toFixed(2)} mm (bottom), perpendicular to the PCB.`;
     for (const button of cutButtons) {
       const selected = Number(button.dataset.offset) === offsetMM;
       button.setAttribute('aria-pressed', String(selected));

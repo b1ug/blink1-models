@@ -30,7 +30,7 @@ test('the three longitudinal sections follow the v3k material and wall thickness
   for (const [offset, top, bottom] of [[0, 2.992, 2.996], [7.25, 1.770, 1.772], [8.42, .999, .999]]) {
     const gauge = cut.setEnabled(true, offset);
     assert.ok(Math.abs(gauge.top - top) < .005 && Math.abs(gauge.bottom - bottom) < .005);
-    const z = -offset * unit;
+    const z = offset * unit;
     for (const [i, part] of parts.entries()) {
       const cap = part.getObjectByName(part.name + ' section');
       const surface = part.geometry;
@@ -49,15 +49,39 @@ test('the three longitudinal sections follow the v3k material and wall thickness
           for (const key of Object.keys(light)) assert.equal(shader.uniforms[key], light[key]);
         }
       }
-      // All indexed, visible vertices must lie in the half-space behind the
-      // selected plane. Every cap triangle lies on the actual section.
+      // Measure only vertices referenced by the clipped triangles. Each cut
+      // keeps the far wall and the full width up to the selected near-side plane.
       const vertices = surface.getAttribute('position'), index = surface.getIndex();
-      for (let j = 0; j < index.count; j++) assert.ok(vertices.getZ(index.getX(j)) <= z + 1e-6);
+      const box = new THREE.Box3().setFromObject(original[i]);
+      let minZ = Infinity, maxZ = -Infinity;
+      for (let j = 0; j < index.count; j++) {
+        const vertexZ = vertices.getZ(index.getX(j));
+        minZ = Math.min(minZ, vertexZ);
+        maxZ = Math.max(maxZ, vertexZ);
+      }
+      assert.ok(Math.abs(minZ - box.min.z) < 1e-6);
+      assert.ok(Math.abs(maxZ - z) < 1e-6, `cut stopped on the wrong side at ${offset} mm`);
+      if (i === 0) {
+        const width = (maxZ - minZ) / unit;
+        assert.ok(Math.abs(width - (8.5 + offset)) < .005);
+        assert.ok(Math.abs(gauge.retainedWidth - width) < .005);
+
+        // Through the retained body, both plastic walls must still have their
+        // original inner and outer surfaces on opposite sides of the PCB.
+        const led = model.group.getObjectByName('L1 RGB emitter');
+        ray.set(from.set(led.position.x, box.max.y + unit, (minZ + maxZ) / 2), down);
+        const sourceHits = ray.intersectObject(original[i], false);
+        const cutHits = ray.intersectObject(new THREE.Mesh(surface, probe), false);
+        assert.equal(sourceHits.length, 4);
+        assert.equal(cutHits.length, 4);
+        for (const [j, hit] of cutHits.entries()) {
+          assert.ok(Math.abs(hit.distance - sourceHits[j].distance) < 1e-6);
+        }
+      }
       const points = cap.geometry.getAttribute('position');
       for (let j = 0; j < points.count; j++) assert.ok(Math.abs(points.getZ(j) - z) < 1e-6);
       // Use the uncut CAD walls as the reference. At each longitude probe
       // materials from above, then test the filled section from the side.
-      const box = new THREE.Box3().setFromObject(original[i]);
       let solidCount = 0, cavityCount = 0;
       for (let x = box.min.x + .117 * unit; x < box.max.x; x += .43 * unit) {
         ray.set(from.set(x, box.max.y + unit, z), down);
