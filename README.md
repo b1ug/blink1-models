@@ -1,6 +1,8 @@
 # blink(1) Models
 
-The viewer opens with the blink(1) mk2 assembled and both PCB LEDs on. Use the checkbox and color picker for each LED to see its contribution to the diffuser. **Side view** turns the near metal rail toward the camera. Choose **Cutaway** and **Center** at the same angle to see the board and LED windows. Diagonal hatching marks the section through the frame and diffuser. Its lighting comes from the closed assembly. **PCB only** shows the exposed board and **Empty shell** shows the unlit enclosure. The controls remember your choices as you switch views. The interactive viewer requires WebGL 2. [Open the model viewer](https://b1ug.github.io/blink1-models/)
+[Open the live mk2 demo](https://b1ug.github.io/blink1-models/) · [Download the model shown in the demo](https://b1ug.github.io/blink1-models/downloads/blink1-mk2.zip)
+
+The viewer opens with the blink(1) mk2 assembled and both PCB LEDs on. Use the checkbox and color picker for each LED to see its contribution to the diffuser. **Side view** turns the near metal rail toward the camera. Choose **Cutaway** and **Center** at the same angle to see the board and LED windows. Diagonal hatching marks the section through the frame and diffuser. Its lighting comes from the closed assembly. **PCB only** shows the exposed board and **Empty shell** shows the unlit enclosure. The controls remember your choices as you switch views. The interactive viewer requires WebGL 2.
 
 This repository maintains the reusable geometry, assembly code, provenance and per-file checksums used by nb1 Debugger, nb1 WebHID and nb1 Guide. Each consumer can import a pinned version and ship it offline.
 
@@ -60,7 +62,7 @@ The renderings show the rail profile and shoulder finish before and after the co
 
 The enclosure geometry and derivatives carry [CC BY-SA 4.0](models/mk2/model-assets/LICENSE.txt). The upstream blink(1) README declares [CC BY-SA 3.0](https://github.com/todbot/blink1/blob/main/README.md) for the PCB source; the derived layout is documented in [PCB-LICENSE.txt](models/mk2/model-assets/PCB-LICENSE.txt). The [source record](models/mk2/model-assets/source.json) documents each source and modification. Assembly code is supplied under the [MIT license](LICENSE). blink(1) is a ThingM trademark.
 
-## Build the catalog
+## Build and publish the demo
 
 ```sh
 npm ci --prefix site --ignore-scripts
@@ -68,4 +70,6 @@ python3 scripts/check.py --site --bundle
 python3 -m http.server --directory dist/site 8000
 ```
 
-Open `http://localhost:8000/`. The generated viewer and model files are self-contained. GitHub Actions checks file integrity and builds both the catalog and versioned model archive.
+Open `http://localhost:8000/`. The build puts the viewer, model assets, matching ZIP and its SHA-256 checksum in `dist/site/`. The demo’s **Download model** link follows the deployed revision. Tagged model archives remain available in [GitHub Releases](https://github.com/b1ug/blink1-models/releases).
+
+In **Settings → Pages → Build and deployment**, the publishing source is **GitHub Actions**. The **Model catalog** workflow tests every pull request, checks the ZIP checksum and compares the archived manifest with the viewer’s manifest. A merge to `main` publishes the verified `dist/site/` artifact to the `github-pages` environment. To redeploy, run **Model catalog → Run workflow** on `main`. [Model catalog workflow runs](https://github.com/b1ug/blink1-models/actions/workflows/catalog.yml)
