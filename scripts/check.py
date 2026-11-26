@@ -1,6 +1,7 @@
 """Verify all declared model content, and optionally build the Pages site or release ZIP."""
 import argparse
 import hashlib
+from io import BytesIO
 import json
 from pathlib import Path
 import shutil
@@ -28,19 +29,22 @@ def verified_files():
     return manifest
 
 
-def archive(version, names):
-    target = ROOT / "dist" / f"blink1-mk2-v{version}.zip"
-    target.parent.mkdir(exist_ok=True)
+def write_archives(names, targets):
     files = [(name, MODEL / name) for name in [*names, "manifest.json"]]
     files.append(("LICENSE", ROOT / "LICENSE"))
-    with ZipFile(target, "w") as bundle:
+    buffer = BytesIO()
+    with ZipFile(buffer, "w") as bundle:
         for name, path in sorted(files):
             info = ZipInfo(name, (1980, 1, 1, 0, 0, 0))
             info.create_system = 3
             info.external_attr = 0o100644 << 16
             bundle.writestr(info, path.read_bytes(), compress_type=ZIP_DEFLATED, compresslevel=9)
-    checksum = hashlib.sha256(target.read_bytes()).hexdigest()
-    target.with_suffix(".sha256").write_text(f"{checksum}  {target.name}\n")
+    data = buffer.getvalue()
+    checksum = hashlib.sha256(data).hexdigest()
+    for target in targets:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(data)
+        target.with_suffix(".sha256").write_text(f"{checksum}  {target.name}\n")
 
 
 def website(names):
@@ -67,8 +71,12 @@ if __name__ == "__main__":
     parser.add_argument("--bundle", action="store_true")
     options = parser.parse_args()
     manifest = verified_files()
+    archives = []
     if options.site:
         website(manifest["files"])
+        archives.append(ROOT / "dist/site/downloads/blink1-mk2.zip")
     if options.bundle:
-        archive(manifest["version"], manifest["files"])
+        archives.append(ROOT / "dist" / f"blink1-mk2-v{manifest['version']}.zip")
+    if archives:
+        write_archives(manifest["files"], archives)
     print(f"Verified {len(manifest['files'])} mk2 files for v{manifest['version']}")
